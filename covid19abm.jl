@@ -44,6 +44,7 @@ Base.@kwdef mutable struct Human
     vaccine_n::Int16 = 0
     protected::Int64 = 0
     days_recovered::Int64 = -1
+    boosted::Bool = false
 
     vac_eff_inf::Array{Array{Array{Float64,1},1},1} = [[[0.0]]]
     vac_eff_symp::Array{Array{Array{Float64,1},1},1} = [[[0.0]]]
@@ -55,7 +56,7 @@ end
     β = 0.0345       
     seasonal::Bool = false ## seasonal betas or not
     popsize::Int64 = 100000
-    prov::Symbol = :newyorkcity
+    prov::Symbol = :usa
     calibration::Bool = false
     calibration2::Bool = false 
     start_several_inf::Bool = true
@@ -102,8 +103,7 @@ end
     initialinf3::Int64 = 5 #number of initial infected of third strain
     time_third_strain::Int64 = 999 #when will the third strain introduced - P1 March 20
     third_strain_trans::Float64 = 1.6 #transmissibility of third strain
-    reduction_recovered::Float64 = 0.21
-
+    
     ## Delta - B.1.617.2
     ins_fourth_strain::Bool = true #insert fourth strain?
     initialinf4::Int64 = 1 #number of initial infected of fourth strain
@@ -127,6 +127,9 @@ end
     vaccine_proportion::Vector{Float64} = [0.59;0.33;0.08]
     vaccine_proportion_2::Vector{Float64} = [0.63;0.37;0.0]
     vac_period::Array{Int64,1} = [21;28;999]
+    booster_after::Array{Int64,1} = [180;180;999]
+    time_first_to_booster::Int64 = 467
+
     #=------------ Vaccine Efficacy ----------------------------=#
     days_to_protection::Array{Array{Array{Int64,1},1},1} = [[[14],[0;7]],[[14],[0;14]],[[14]]]
     vac_efficacy_inf::Array{Array{Array{Array{Float64,1},1},1},1} = [[[[0.46],[0.6;0.861]],[[0.295],[0.6;0.895]],[[0.368],[0.48;0.736]],[[0.368],[0.48;0.64]],[[0.46],[0.6;0.861]],[[0.368],[0.48;0.736]]],
@@ -321,6 +324,7 @@ function main(ip::ModelParameters,sim::Int64)
     
     vac_rate_1::Matrix{Int64} = vaccination_rate_1(sim)
     vac_rate_2::Matrix{Int64} = vaccination_rate_2(sim)
+    vac_rate_booster::Vector{Int64} = booster_doses()
     vaccination_days::Vector{Int64} = days_vac_f(size(vac_rate_1,1))
     
 
@@ -357,7 +361,7 @@ function main(ip::ModelParameters,sim::Int64)
     total_given::Int64 = 0
     count_relax::Int64 = 1
     if p.vaccinating
-        vac_ind = vac_selection(sim,18,agebraks_vac)
+        vac_ind = vac_selection(sim,5,agebraks_vac)
     else
         time_vac = 9999 #this guarantees that no one will be vaccinated
     end
@@ -411,13 +415,17 @@ function main(ip::ModelParameters,sim::Int64)
             time_prop += 1
         end
 
-        if p.vaccinating && st == p.time_vac_kids 
+        #= if p.vaccinating && st == p.time_vac_kids 
             vac_ind = vac_selection(sim,12,agebraks_vac)
-        end
+        end =#
 
         time_vac += 1
         if time_pos > 0 
-            aux_ =  vac_time!(sim,vac_ind,time_pos+1,vac_rate_1,vac_rate_2)
+            if st >= p.time_first_to_booster
+                vac_rate_booster[time_pos+1] += sum(vac_rate_1[time_pos+1,:])
+                vac_rate_1[time_pos+1,:] .= 0
+            end
+            aux_ =  vac_time!(sim,vac_ind,time_pos+1,vac_rate_1,vac_rate_2,vac_rate_booster)
             remaining_doses += aux_[1]
             total_given += aux_[2]
         end
@@ -480,7 +488,7 @@ function vac_selection(sim::Int64,age::Int64,agebraks_vac)
 end
 
 
-function vac_time!(sim::Int64,vac_ind::Vector{Vector{Int64}},time_pos::Int64,vac_rate_1::Matrix{Int64},vac_rate_2::Matrix{Int64})
+function vac_time!(sim::Int64,vac_ind::Vector{Vector{Int64}},time_pos::Int64,vac_rate_1::Matrix{Int64},vac_rate_2::Matrix{Int64},vac_rate_booster::Vector{Int64})
     aux_states = (MILD, MISO, INF, IISO, HOS, ICU, DED)
     ##first dose
    # rng = MersenneTwister(123*sim)
@@ -510,6 +518,7 @@ function vac_time!(sim::Int64,vac_ind::Vector{Vector{Int64}},time_pos::Int64,vac
         r = rand(rr)
         doses_first[r] -= 1
     end
+
 
     for i in 1:length(vac_ind)
         pos = findall(y-> humans[y].vac_status == 1 && humans[y].days_vac >= p.vac_period[humans[y].vaccine_n] && !(humans[y].health_status in aux_states),vac_ind[i])
@@ -626,11 +635,23 @@ function vac_time!(sim::Int64,vac_ind::Vector{Vector{Int64}},time_pos::Int64,vac
         end
     end
 
-    t = sum(vac_rate_1[time_pos,:]+vac_rate_2[time_pos,:])
-   # println("Total $time_pos $remaining_doses $total_given $t")
-    if total_given != t
-        error("vaccination")
+   
+    ### Let's add booster... those are extra doses, we don't care about missing doses
+
+    pos = findall(y-> y.vac_status == 2 && y.days_vac >= p.booster_after[y.vaccine_n] && !(y.boosted) && !(y.health_status in aux_states),humans)
+
+    l2 = min(vac_rate_booster[time_pos]+remaining_doses,length(pos))
+    pos = sample(pos,l2,replace=false)
+
+    for i in pos
+        x = humans[i]
+        x.days_vac = 0
+        x.boosted = true
+        x.vac_eff_inf = deepcopy(p.vac_efficacy_inf[x.vaccine_n])
+        x.vac_eff_symp = deepcopy(p.vac_efficacy_symp[x.vaccine_n])
+        x.vac_eff_sev = deepcopy(p.vac_efficacy_sev[x.vaccine_n])
     end
+
    
 
     return remaining_doses,total_given
