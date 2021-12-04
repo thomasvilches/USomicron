@@ -71,11 +71,7 @@ end
     fpreiso::Float64 = 0.0 ## percent that is isolated at the presymptomatic stage
     tpreiso::Int64 = 0## preiso is only turned on at this time. 
     frelasymp::Float64 = 0.26 ## relative transmission of asymptomatic
-    ctstrat::Int8 = 0 ## strategy 
     fctcapture::Float16 = 0.0 ## how many symptomatic people identified
-    fcontactst::Float16 = 0.0 ## fraction of contacts being isolated/quarantined
-    cidtime::Int8 = 0  ## time to identification (for CT) post symptom onset
-    cdaysback::Int8 = 0 ## number of days to go back and collect contacts
     #vaccine_ef::Float16 = 0.0   ## change this to Float32 typemax(Float32) typemax(Float64)
     vac_com_dec_max::Float16 = 0.0 # how much the comorbidity decreases the vac eff
     vac_com_dec_min::Float16 = 0.0 # how much the comorbidity decreases the vac eff
@@ -160,7 +156,7 @@ end
     turnon::Int64 = 0
     time_back_to_normal::Int64 = 999
 
-    day_inital_vac::Int64 = 105 ###this must match to the matrices in matrice code
+    day_inital_vac::Int64 = 104 ###this must match to the matrices in matrice code
     time_vac_kids::Int64 = 253
     using_jj::Bool = false
 

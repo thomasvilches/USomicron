@@ -124,13 +124,13 @@ function run(myp::cv.ModelParameters, nsims=1000, folderprefix="./")
 end
 
 
-function create_folder(ip::cv.ModelParameters,vac="none",province="us",calibrating = true)
+function create_folder(ip::cv.ModelParameters,province="us",calibrating = true)
     
     #RF = string("heatmap/results_prob_","$(replace(string(ip.β), "." => "_"))","_vac_","$(replace(string(ip.vaccine_ef), "." => "_"))","_herd_immu_","$(ip.herd)","_$strategy","cov_$(replace(string(ip.cov_val)))") ## 
-    main_folder = "/data/thomas-covid/ROI"
+    main_folder = "/data/thomas-covid/USomicron"
     #main_folder = "."
     if calibrating
-        RF = string(main_folder,"/results_prob_","$(replace(string(ip.β), "." => "_"))","_herd_immu_","$(ip.herd)","_$vac","_$(ip.file_index)_$(province)") ##  
+        RF = string(main_folder,"/results_prob_","$(replace(string(ip.β), "." => "_"))","_herd_immu_","$(ip.herd)","_$(ip.file_index)_$(province)") ##  
     else
         RF = string(main_folder,"/results_prob_$(ip.file_index)_$(province)") ##  
     end
@@ -158,7 +158,7 @@ function run_param_scen_cal(calibrating::Bool,b::Float64,province::String="us",h
     α3 = $alpha3,
     time_back_to_normal=$when_relax, turnon = $turnon_,waning = $waning)
 
-    folder = create_folder(ip,"pfizer",province,calibrating)
+    folder = create_folder(ip,province,calibrating)
 
     #println("$v_e $(ip.vaccine_ef)")
     run(ip,nsims,folder)
