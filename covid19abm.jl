@@ -1178,7 +1178,7 @@ function move_to_pre(x::Human)
 
 
     if x.recovered
-        if x.vac_status*x.protected == 0 || x.days_recovered <= x.days_vac
+       #=  if x.vac_status*x.protected == 0 || x.days_recovered <= x.days_vac
             index = Int(floor(x.days_recovered/7))
             if index > 0
                 if index <= size(waning_factors_rec,1)
@@ -1191,8 +1191,8 @@ function move_to_pre(x::Human)
             end
         else
             aux = x.vac_eff_sev[x.strain][x.vac_status][x.protected]
-        end
-        auxiliar = (1-aux)
+        end =#
+        auxiliar = 0.0#(1-aux)
     else
         aux = x.vac_status*x.protected > 0 ? x.vac_eff_sev[x.strain][x.vac_status][x.protected] : 0.0
         auxiliar = (1-aux)
