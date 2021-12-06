@@ -2022,7 +2022,7 @@ function booster_doses()
     rp = Int.(round.(mean(v[end-30:end])))
     l2 = p.modeltime-(p.day_inital_vac+length(v)-2)
     if l2 > 0
-        v2 = repeat(rp,l2)
+        v2 = repeat([rp],l2)
         v = [v;v2]
     end
     return v
