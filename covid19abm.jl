@@ -1649,18 +1649,19 @@ function dyntrans(sys_time, grps,sim)
                     if y.health == SUS && y.swap == UNDEF
                         aux = y.vac_status*y.protected > 0 ? y.vac_eff_inf[x.strain][y.vac_status][y.protected] : 0.0
                         adj_beta = beta*(1-aux)
-                    elseif y.health_status == REC  && y.swap == UNDEF
+                    elseif y.health_status == REC && y.swap == UNDEF
 
                         if y.vac_status*y.protected == 0 ||  y.days_recovered <= y.days_vac
                             index = Int(floor(y.days_recovered/7))
+                            aux_red = x.strain == 6 ? p.reduction_omicron : 0.0
                             if index > 0
                                 if index <= size(waning_factors_rec,1)
-                                    aux = waning_factors_rec[index,1]*((1-p.reduction_omicron)^Int(x.strain==6))
+                                    aux = waning_factors_rec[index,1]*(1-aux_red)
                                 else
-                                    aux = waning_factors_rec[end,1]*((1-p.reduction_omicron)^Int(x.strain==6))
+                                    aux = waning_factors_rec[end,1]*(1-aux_red)
                                 end
                             else
-                                aux = 1.0*((1-p.reduction_omicron)^Int(x.strain==6))
+                                aux = 1.0*(1-aux_red)
                             end
                         else
                             aux = y.vac_eff_inf[x.strain][y.vac_status][y.protected]
