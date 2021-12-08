@@ -1186,9 +1186,9 @@ function move_to_pre(x::Human)
     x.exp = x.dur[3] # get the presymptomatic period
 
 
-    if x.recovered
+    if x.recovered || x.boosted
         #recovered do not go to hospital
-        auxiliar = 0.0#(1-aux)
+        auxiliar = 0.0 #(1-aux)
     else
         aux = x.vac_status*x.protected > 0 ? x.vac_eff_sev[x.strain][x.vac_status][x.protected] : 0.0
         auxiliar = (1-aux)

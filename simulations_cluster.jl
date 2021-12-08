@@ -67,8 +67,8 @@ function run(myp::cv.ModelParameters, nsims=1000, folderprefix="./")
     for (k, df) in mydfs
         println("saving dataframe sim level: $k")
         # simulation level, save file per health status, per age group
-        #for c in vcat(c1..., c2...)
-        for c in vcat(c1...)
+        for c in vcat(c1..., c2...)
+        #for c in vcat(c1...)
         #for c in vcat(c2...)
             udf = unstack(df, :time, :sim, c) 
             fn = string("$(folderprefix)/simlevel_", lowercase(string(c)), "_", k, ".dat")
