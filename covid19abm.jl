@@ -607,6 +607,9 @@ function vac_time!(sim::Int64,vac_ind::Vector{Vector{Int64}},time_pos::Int64,vac
         position = map(k-> vac_ind[k][pos[k]],aux)
         position2 = map(k-> vac_ind[k][pos2[k]],aux)
         r = vcat(position...,position2...)
+        
+        length(r) == 0 && continue
+            
         rr = sample(r)
         x = humans[rr]
         if x.vac_status == 0
@@ -1105,7 +1108,7 @@ function move_to_latent(x::Human)
     g = findfirst(y-> y >= x.age, age_thres)
 
     if x.recovered
-        index = Int(floor(y.days_recovered/7))
+        index = Int(floor(x.days_recovered/7))
         
         if index > 0
             if index <= size(waning_factors_rec,1)
@@ -1117,7 +1120,7 @@ function move_to_latent(x::Human)
             aux = 1.0
         end
 
-        aux_vac = y.vac_status*y.protected == 0 ? y.vac_eff_symp[x.strain][y.vac_status][y.protected] : 0.0
+        aux_vac = x.vac_status*x.protected > 0 ? x.vac_eff_symp[x.strain][x.vac_status][x.protected] : 0.0
 
         if  aux_vac >= aux
             aux = aux_vac
@@ -1653,7 +1656,7 @@ function dyntrans(sys_time, grps,sim)
                             aux = 1.0*(1-aux_red)
                         end
 
-                        aux_vac = y.vac_status*y.protected == 0 ? y.vac_eff_inf[x.strain][y.vac_status][y.protected] : 0.0
+                        aux_vac = y.vac_status*y.protected > 0 ? y.vac_eff_inf[x.strain][y.vac_status][y.protected] : 0.0
 
                         if  aux_vac >= aux
                             aux = aux_vac
