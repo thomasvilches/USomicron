@@ -126,7 +126,7 @@ end
     vac_period::Array{Int64,1} = [21;28;999]
     booster_after::Array{Int64,1} = [180;180;999]
     vac_boost::Bool = false
-    time_first_to_booster::Int64 = 467
+    time_first_to_booster::Int64 = 9999
     reduction_omicron::Float64 = 0.0
     #=------------ Vaccine Efficacy ----------------------------=#
     days_to_protection::Array{Array{Array{Int64,1},1},1} = [[[14],[0;7]],[[14],[0;14]],[[14]]]
@@ -1105,20 +1105,24 @@ function move_to_latent(x::Human)
     g = findfirst(y-> y >= x.age, age_thres)
 
     if x.recovered
-        if x.vac_status*x.protected == 0 || x.days_recovered <= x.days_vac
-            index = Int(floor(x.days_recovered/7))
-            if index > 0
-                if index <= size(waning_factors_rec,1)
-                    aux = waning_factors_rec[index,3]
-                else
-                    aux = waning_factors_rec[end,3]
-                end
+        index = Int(floor(y.days_recovered/7))
+        
+        if index > 0
+            if index <= size(waning_factors_rec,1)
+                aux = waning_factors_rec[index,3]
             else
-                aux = 1.0
+                aux = waning_factors_rec[end,3]
             end
-        else 
-            aux = x.vac_eff_symp[x.strain][x.vac_status][x.protected]
+        else
+            aux = 1.0
         end
+
+        aux_vac = y.vac_status*y.protected == 0 ? y.vac_eff_symp[x.strain][y.vac_status][y.protected] : 0.0
+
+        if  aux_vac >= aux
+            aux = aux_vac
+        end
+
         auxiliar = (1-aux)
     else
         aux = x.vac_status*x.protected > 0 ? x.vac_eff_symp[x.strain][x.vac_status][x.protected] : 0.0
@@ -1180,20 +1184,7 @@ function move_to_pre(x::Human)
 
 
     if x.recovered
-       #=  if x.vac_status*x.protected == 0 || x.days_recovered <= x.days_vac
-            index = Int(floor(x.days_recovered/7))
-            if index > 0
-                if index <= size(waning_factors_rec,1)
-                    aux = waning_factors_rec[index,3]
-                else
-                    aux = waning_factors_rec[end,3]
-                end
-            else
-                aux = 1.0
-            end
-        else
-            aux = x.vac_eff_sev[x.strain][x.vac_status][x.protected]
-        end =#
+        #recovered do not go to hospital
         auxiliar = 0.0#(1-aux)
     else
         aux = x.vac_status*x.protected > 0 ? x.vac_eff_sev[x.strain][x.vac_status][x.protected] : 0.0
@@ -1650,21 +1641,22 @@ function dyntrans(sys_time, grps,sim)
                         aux = y.vac_status*y.protected > 0 ? y.vac_eff_inf[x.strain][y.vac_status][y.protected] : 0.0
                         adj_beta = beta*(1-aux)
                     elseif y.health_status == REC && y.swap == UNDEF
-
-                        if y.vac_status*y.protected == 0 ||  y.days_recovered <= y.days_vac
-                            index = Int(floor(y.days_recovered/7))
-                            aux_red = x.strain == 6 ? p.reduction_omicron : 0.0
-                            if index > 0
-                                if index <= size(waning_factors_rec,1)
-                                    aux = waning_factors_rec[index,1]*(1-aux_red)
-                                else
-                                    aux = waning_factors_rec[end,1]*(1-aux_red)
-                                end
+                        index = Int(floor(y.days_recovered/7))
+                        aux_red = x.strain == 6 ? p.reduction_omicron : 0.0
+                        if index > 0
+                            if index <= size(waning_factors_rec,1)
+                                aux = waning_factors_rec[index,1]*(1-aux_red)
                             else
-                                aux = 1.0*(1-aux_red)
+                                aux = waning_factors_rec[end,1]*(1-aux_red)
                             end
                         else
-                            aux = y.vac_eff_inf[x.strain][y.vac_status][y.protected]
+                            aux = 1.0*(1-aux_red)
+                        end
+
+                        aux_vac = y.vac_status*y.protected == 0 ? y.vac_eff_inf[x.strain][y.vac_status][y.protected] : 0.0
+
+                        if  aux_vac >= aux
+                            aux = aux_vac
                         end
 
                         adj_beta = beta*(1-aux)
