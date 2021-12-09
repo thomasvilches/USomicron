@@ -812,6 +812,8 @@ function herd_immu_dist_4(sim::Int64,strain::Int64)
         N = 16
     end
 
+    vprob::Vector{Float64} = vector_probs()
+
     for g = 1:6
         pos = findall(y->y.ag_new == g && y.health == SUS,humans)
         n_dist = min(length(pos),Int(floor(vec_n[g]*p.popsize/10000)))
@@ -819,7 +821,11 @@ function herd_immu_dist_4(sim::Int64,strain::Int64)
         for i = pos2
             humans[i].strain = strain
             humans[i].swap = strain == 1 ? REC : REC2
+            humans[i].swap_status = REC
             move_to_recovered(humans[i])
+            r = rand()
+            day = findfirst(y-> y > r, vprob)
+            humans[i].days_recovered = day
             humans[i].sickfrom = INF
             humans[i].herd_im = true
         end
@@ -1607,7 +1613,7 @@ export _get_betavalue
         cnt = rand(negative_binomials_shelter(ag,p.contact_change_2))  # expensive operation, try to optimize
     end
     
-    if x.health in (DED,DED2,DED3)
+    if x.health_status == DED
         cnt = 0 
     end
     x.nextday_meetcnt = cnt
