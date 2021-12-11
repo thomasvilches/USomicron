@@ -127,13 +127,15 @@ end
     booster_after::Array{Int64,1} = [180;180;999]
     vac_boost::Bool = false
     time_first_to_booster::Int64 = 9999
+    min_age_booster::Int64 = 16
     reduction_omicron::Float64 = 0.0
+    reduction_reduction::Float64 = 0.0
     #=------------ Vaccine Efficacy ----------------------------=#
     
     #=------------ Vaccine Efficacy ----------------------------=#
     days_to_protection::Array{Array{Array{Int64,1},1},1} = [[[14],[0;7]],[[14],[0;14]],[[14]]]
-    vac_efficacy_inf::Array{Array{Array{Array{Float64,1},1},1},1} = [[[[0.46],[0.6;0.861]],[[0.295],[0.6;0.895]],[[0.368],[0.48;0.736]],[[0.368],[0.48;0.64]],[[0.46],[0.6;0.861]],[[0.46*(1-reduction_omicron)],[0.6*(1-reduction_omicron);0.861*(1-reduction_omicron)]]],
-    [[[0.61],[0.61,0.935]],[[0.56],[0.56,0.86]],[[0.488],[0.488;0.745]],[[0.496],[0.496,0.76]],[[0.61],[0.61,0.935]],[[0.61*(1-reduction_omicron)],[0.61*(1-reduction_omicron),0.935*(1-reduction_omicron)]]],
+    vac_efficacy_inf::Array{Array{Array{Array{Float64,1},1},1},1} = [[[[0.46],[0.6;0.861]],[[0.295],[0.6;0.895]],[[0.368],[0.48;0.736]],[[0.368],[0.48;0.64]],[[0.46],[0.6;0.861]],[[0.46],[0.6;0.861]]],
+    [[[0.61],[0.61,0.935]],[[0.56],[0.56,0.86]],[[0.488],[0.488;0.745]],[[0.496],[0.496,0.76]],[[0.61],[0.61,0.935]],[[0.61],[0.61,0.935]]],
     [[[0.61]],[[0.56]],[[0.488]],[[0.496]],[[0.61]],[[0.488]]]]#### 50:5:80
 
     vac_efficacy_symp::Array{Array{Array{Array{Float64,1},1},1},1} = [[[[0.57],[0.66;0.94]],[[0.536],[0.62;0.937]],[[0.332],[0.66;0.94]],[[0.335],[0.62;0.88]],[[0.57],[0.66;0.94]],[[0.57],[0.66;0.94]]],
@@ -641,7 +643,7 @@ function vac_time!(sim::Int64,vac_ind::Vector{Vector{Int64}},time_pos::Int64,vac
    
     ### Let's add booster... those are extra doses, we don't care about missing doses
 
-    pos = findall(y-> y.vac_status == 2 && y.days_vac >= p.booster_after[y.vaccine_n] && !(p.vac_boost && y.boosted) && !(y.health_status in aux_states),humans)
+    pos = findall(y-> y.vac_status == 2 && y.days_vac >= p.booster_after[y.vaccine_n] && y.age >= p.min_age_booster && !(p.vac_boost && y.boosted) && !(y.health_status in aux_states),humans)
 
     l2 = min(vac_rate_booster[time_pos]+remaining_doses,length(pos))
     pos = sample(pos,l2,replace=false)
@@ -1649,27 +1651,63 @@ function dyntrans(sys_time, grps,sim)
                     beta = _get_betavalue(sys_time, xhealth)
                     adj_beta = 0 # adjusted beta value by strain and vaccine efficacy
                     if y.health == SUS && y.swap == UNDEF
-                        aux = y.vac_status*y.protected > 0 ? y.vac_eff_inf[x.strain][y.vac_status][y.protected] : 0.0
+                        if y.vac_status*y.protected > 0
+
+                            if x.strain == 6
+                                if y.boosted
+                                    aux_r = (1-p.reduction_omicron*(1-p.reduction_reduction))
+                                else
+                                    aux_r = (1-p.reduction_omicron)
+                                end
+                            else
+                                aux_r = 1.0
+                            end
+
+                            aux = aux_r*y.vac_eff_inf[x.strain][y.vac_status][y.protected]
+                        else
+                            aux = 0.0
+                        end
+                         
                         adj_beta = beta*(1-aux)
+
                     elseif y.health_status == REC && y.swap == UNDEF
                         index = Int(floor(y.days_recovered/7))
                         aux_red = x.strain == 6 ? p.reduction_omicron : 0.0
-                        if index > 0
-                            if index <= size(waning_factors_rec,1)
-                                aux = waning_factors_rec[index,1]*(1-aux_red)
+
+                        if y.vac_status*y.protected > 0
+
+                            aux_vac = y.vac_eff_inf[x.strain][y.vac_status][y.protected]
+
+                            if index > 0
+                                if index <= size(waning_factors_rec,1)
+                                    aux = waning_factors_rec[index,1]
+                                else
+                                    aux = waning_factors_rec[end,1]
+                                end
                             else
-                                aux = waning_factors_rec[end,1]*(1-aux_red)
+                                aux = 1.0
                             end
+
+                            if  aux_vac >= aux
+                                aux = aux_vac
+                            end
+
+                            aux = aux*(1-aux_red*(1-p.reduction_reduction))
                         else
-                            aux = 1.0*(1-aux_red)
+                            
+                            if index > 0
+                                if index <= size(waning_factors_rec,1)
+                                    aux = waning_factors_rec[index,1]*(1-aux_red)
+                                else
+                                    aux = waning_factors_rec[end,1]*(1-aux_red)
+                                end
+                            else
+                                aux = 1.0*(1-aux_red)
+                            end
+
                         end
 
-                        aux_vac = y.vac_status*y.protected > 0 ? y.vac_eff_inf[x.strain][y.vac_status][y.protected] : 0.0
-
-                        if  aux_vac >= aux
-                            aux = aux_vac
-                        end
-
+                        
                         adj_beta = beta*(1-aux)
                     end
 
