@@ -125,7 +125,7 @@ end
     vaccine_proportion_2::Vector{Float64} = [0.63;0.37;0.0]
     vac_period::Array{Int64,1} = [21;28;999]
     booster_after::Array{Int64,1} = [180;180;999]
-    vac_boost::Bool = false
+    vac_boost::Bool = true
     time_first_to_booster::Int64 = 9999
     min_age_booster::Int64 = 16
     reduction_omicron::Float64 = 0.0
