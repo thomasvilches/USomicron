@@ -45,6 +45,7 @@ Base.@kwdef mutable struct Human
     protected::Int64 = 0
     days_recovered::Int64 = -1
     boosted::Bool = false
+    n_boosted::Int64 = 0
 
     vac_eff_inf::Array{Array{Array{Float64,1},1},1} = [[[0.0]]]
     vac_eff_symp::Array{Array{Array{Float64,1},1},1} = [[[0.0]]]
@@ -125,7 +126,7 @@ end
     vaccine_proportion_2::Vector{Float64} = [0.63;0.37;0.0]
     vac_period::Array{Int64,1} = [21;28;999]
     booster_after::Array{Int64,1} = [180;180;999]
-    vac_boost::Bool = true
+    n_boosts::Int64 = 1
     time_first_to_booster::Int64 = 9999
     min_age_booster::Int64 = 16
     reduction_omicron::Float64 = 0.0
@@ -643,7 +644,7 @@ function vac_time!(sim::Int64,vac_ind::Vector{Vector{Int64}},time_pos::Int64,vac
    
     ### Let's add booster... those are extra doses, we don't care about missing doses
 
-    pos = findall(y-> y.vac_status == 2 && y.days_vac >= p.booster_after[y.vaccine_n] && y.age >= p.min_age_booster && !(p.vac_boost && y.boosted) && !(y.health_status in aux_states),humans)
+    pos = findall(y-> y.vac_status == 2 && y.days_vac >= p.booster_after[y.vaccine_n] && y.age >= p.min_age_booster && y.n_boosted < p.n_boosts && !(y.health_status in aux_states),humans)
 
     l2 = min(vac_rate_booster[time_pos]+remaining_doses,length(pos))
     pos = sample(pos,l2,replace=false)
@@ -652,6 +653,7 @@ function vac_time!(sim::Int64,vac_ind::Vector{Vector{Int64}},time_pos::Int64,vac
         x = humans[i]
         x.days_vac = 0
         x.boosted = true
+        x.n_boosted += 1
         x.vac_eff_inf = deepcopy(p.vac_efficacy_inf[x.vaccine_n])
         x.vac_eff_symp = deepcopy(p.vac_efficacy_symp[x.vaccine_n])
         x.vac_eff_sev = deepcopy(p.vac_efficacy_sev[x.vaccine_n])
