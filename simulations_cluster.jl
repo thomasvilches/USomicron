@@ -120,6 +120,9 @@ function run(myp::cv.ModelParameters, nsims=1000, folderprefix="./")
 
     writedlm(string(folderprefix,"/year_of_work.dat"),[cdr[i].years_w_lost for i=1:nsims])
 
+    writedlm(string(folderprefix,"/year_of_death.dat"),hcat([cdr[i].vector_dead for i=1:nsims]...))
+    
+
     return mydfs
 end
 

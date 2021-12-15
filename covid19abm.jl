@@ -303,11 +303,23 @@ function runsim(simnum, ip::ModelParameters)
 
     years_w_lost = sum(map(y-> max(0,range_work[end]-max(humans[y].age,range_work[1])),aux))
 
+    pos = findall(y-> y in (11,22,33,44,55,66),hmatrix[:,end])
+
+    vector_ded::Vector{Int64} = zeros(Int64,100)
+
+    for i = pos
+        x = humans[i]
+        vector_ded[(x.age+1)] += 1
+    end
+
     return (a=all, g1=ag1, g2=ag2, g3=ag3, g4=ag4, g5=ag5,g6=ag6,g7=ag7, work = work,
     R01 = R01,
     R02 = R02, cov1 = coverage1,cov2 = coverage2,cov12 = coverage12,cov22 = coverage22,
-    n_pfizer = n_pfizer, n_moderna = n_moderna, n_jensen = n_jensen, n_pfizer_w = n_pfizer_w, n_moderna_w = n_moderna_w, n_jensen_w = n_jensen_w,
-    n_pfizer_2 = n_pfizer_2, n_moderna_2 = n_moderna_2, n_jensen_2 = n_jensen_2, n_pfizer_w_2 = n_pfizer_w_2, n_moderna_w_2 = n_moderna_w_2, n_jensen_w_2 = n_jensen_w_2,years_w_lost = years_w_lost, remaining = remaining_doses, total_given = total_given)
+    n_pfizer = n_pfizer, n_moderna = n_moderna, n_jensen = n_jensen, n_pfizer_w = n_pfizer_w, 
+    n_moderna_w = n_moderna_w, n_jensen_w = n_jensen_w,
+    vector_dead=vector_ded,
+    n_pfizer_2 = n_pfizer_2, n_moderna_2 = n_moderna_2, n_jensen_2 = n_jensen_2, 
+    n_pfizer_w_2 = n_pfizer_w_2, n_moderna_w_2 = n_moderna_w_2, n_jensen_w_2 = n_jensen_w_2,years_w_lost = years_w_lost, remaining = remaining_doses, total_given = total_given)
 end
 export runsim
 
