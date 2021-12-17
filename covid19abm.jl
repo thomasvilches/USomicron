@@ -217,6 +217,12 @@ function runsim(simnum, ip::ModelParameters)
     all = _collectdf(hmatrix)
     spl = _splitstate(hmatrix, ags)
     work = _collectdf(spl[1])
+
+    vac_v = map(x-> x.vac_status > 0 ? 1 : 2, humans)
+    spl = _splitstate(hmatrix, vac_v)
+    vac = _collectdf(spl[1])
+    unvac = _collectdf(spl[2])
+
     
 
     age_groups = [0:4, 5:11, 12:17, 18:49, 50:64, 65:79, 80:999]
@@ -232,7 +238,7 @@ function runsim(simnum, ip::ModelParameters)
     insertcols!(all, 1, :sim => simnum); insertcols!(ag1, 1, :sim => simnum); insertcols!(ag2, 1, :sim => simnum); 
     insertcols!(ag3, 1, :sim => simnum); insertcols!(ag4, 1, :sim => simnum); insertcols!(ag5, 1, :sim => simnum);
     insertcols!(ag6, 1, :sim => simnum); insertcols!(ag7, 1, :sim => simnum); insertcols!(work, 1, :sim => simnum);
- 
+    insertcols!(vac, 1, :sim => simnum); insertcols!(unvac, 1, :sim => simnum);
     
     R01 = zeros(Float64,size(hh1,1))
 
@@ -304,7 +310,7 @@ function runsim(simnum, ip::ModelParameters)
 
     years_w_lost = sum(map(y-> max(0,range_work[end]-max(humans[y].age,range_work[1])),aux))
 
-    return (a=all, g1=ag1, g2=ag2, g3=ag3, g4=ag4, g5=ag5,g6=ag6,g7=ag7, work = work,
+    return (a=all, g1=ag1, g2=ag2, g3=ag3, g4=ag4, g5=ag5,g6=ag6,g7=ag7, work = work, vac = vac, unvac = unvac,
     R01 = R01,
     R02 = R02, cov1 = coverage1,cov2 = coverage2,cov12 = coverage12,cov22 = coverage22,
     n_pfizer = n_pfizer, n_moderna = n_moderna, n_jensen = n_jensen, n_pfizer_w = n_pfizer_w, n_moderna_w = n_moderna_w, n_jensen_w = n_jensen_w,
