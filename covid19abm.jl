@@ -170,6 +170,7 @@ end
     α::Float64 = 1.0
     α2::Float64 = 0.0
     α3::Float64 = 1.0
+    doubledose::Int64 = 999
 
     scenario::Symbol = :statuscuo
 
@@ -335,6 +336,12 @@ function main(ip::ModelParameters,sim::Int64)
     vac_rate_2::Matrix{Int64} = vaccination_rate_2(sim)
     vac_rate_booster::Vector{Int64} = booster_doses()
     vaccination_days::Vector{Int64} = days_vac_f(size(vac_rate_1,1))
+
+    if p.doubledose < length(vac_rate_booster)
+        vac_rate_1[p.doubledose:end,:] = 2*vac_rate_1[p.doubledose:end,:]
+        vac_rate_2[p.doubledose:end,:] = 2*vac_rate_2[p.doubledose:end,:]
+        vac_rate_booster[p.doubledose:end] = 2*vac_rate_booster[p.doubledose:end]
+    end
     
 
     agebraks_vac::SVector{8, UnitRange{Int64}} = get_breaks_vac()#@SVector [0:0,1:4,5:14,15:24,25:44,45:64,65:74,75:100]

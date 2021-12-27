@@ -162,7 +162,7 @@ function run_param_scen_cal(calibrating::Bool,b::Float64,province::String="us",h
     rel_trans_sixth = $trans,
     n_boosts = $nb,
     reduction_reduction = $redred,
-    time_back_to_normal=$when_relax, turnon = $turnon_,waning = $waning)
+    doubledose=$when_relax, turnon = $turnon_,waning = $waning)
 
     folder = create_folder(ip,province,calibrating)
 
