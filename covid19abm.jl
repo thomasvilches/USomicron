@@ -46,6 +46,7 @@ Base.@kwdef mutable struct Human
     days_recovered::Int64 = -1
     boosted::Bool = false
     n_boosted::Int64 = 0
+    recvac::Int64 = 0 # 1 - rec , 2 - vac ... this field shows which immunity will be used for protection
 
     vac_eff_inf::Array{Array{Array{Float64,1},1},1} = [[[0.0]]]
     vac_eff_symp::Array{Array{Array{Float64,1},1},1} = [[[0.0]]]
@@ -113,12 +114,13 @@ end
     time_fifth_strain::Int64 = 7 #when will the fifth strain introduced
     fifth_strain_trans::Float64 = 1.35 #transmissibility of fifth strain
 
-    ## Beta - B.1.351
+    ##OMICRON
     ins_sixth_strain::Bool = true #insert third strain?
     initialinf6::Int64 = 1 #number of initial infected of sixth strain
     time_sixth_strain::Int64 = 999 #when will the sixth strain introduced
     rel_trans_sixth::Float64 = 1.0
     sixth_strain_trans::Float64 = rel_trans_sixth*sec_strain_trans*fourth_strain_trans #transmissibility of sixth strain
+    reduction_sev_omicron::Float64 = 0.7 ##reduction of severity compared to Delta
 
     mortality_inc::Float64 = 1.3 #The mortality increase when infected by strain 2
 
@@ -143,8 +145,8 @@ end
     [[[0.921],[0.921,0.941]],[[0.88],[0.88,0.91]],[[0.332],[0.66;0.94]],[[0.68],[0.68,0.70]],[[0.921],[0.921,0.941]],[[0.921],[0.921,0.941]]], #### 50:5:80
     [[[0.921]],[[0.88]],[[0.332]],[[0.68]],[[0.921]],[[0.332]]]] #### 50:5:80
     
-    vac_efficacy_sev::Array{Array{Array{Array{Float64,1},1},1},1} = [[[[0.62],[0.80;0.92]],[[0.541],[0.8;0.94]],[[0.34],[0.68;0.974]],[[0.34],[0.68;0.80]],[[0.62],[0.80;0.92]],[[0.62],[0.80;0.92]]],
-    [[[0.921],[0.921,1.0]],[[0.816],[0.816,0.957]],[[0.34],[0.68;0.974]],[[0.781],[0.781,0.916]],[[0.921],[0.921,1.0]],[[0.921],[0.921,1.0]]],#### 50:5:80
+    vac_efficacy_sev::Array{Array{Array{Array{Float64,1},1},1},1} = [[[[0.62],[0.80;0.92]],[[0.541],[0.8;0.94]],[[0.34],[0.68;0.974]],[[0.34],[0.68;0.80]],[[0.62],[0.80;0.92]],[[0.34],[0.68;0.80]]],
+    [[[0.921],[0.921,1.0]],[[0.816],[0.816,0.957]],[[0.34],[0.68;0.974]],[[0.781],[0.781,0.916]],[[0.921],[0.921,1.0]],[[0.781],[0.781,0.916]]],#### 50:5:80
     [[[0.921]],[[0.816]],[[0.34]],[[0.781]],[[0.921]],[[0.34]]]]#### 50:5:80
 
 
@@ -165,12 +167,15 @@ end
 
     day_inital_vac::Int64 = 104 ###this must match to the matrices in matrice code
     time_vac_kids::Int64 = 253
+    time_vac_kids2::Int64 = 428
     using_jj::Bool = false
 
     α::Float64 = 1.0
     α2::Float64 = 0.0
     α3::Float64 = 1.0
     doubledose::Int64 = 999
+    doubledose_kids::Int64 = 999
+    rate_dd_kids::Float64 = 2.0
 
     scenario::Symbol = :statuscuo
 
@@ -343,6 +348,11 @@ function main(ip::ModelParameters,sim::Int64)
         vac_rate_booster[p.doubledose:end] = 2*vac_rate_booster[p.doubledose:end]
     end
     
+    if p.doubledose_kids < length(vac_rate_booster)
+        vac_rate_1[p.doubledose_kids:end,1:2] = p.rate_dd_kids*vac_rate_1[p.doubledose_kids:end,1:2]
+        vac_rate_2[p.doubledose_kids:end,1:2] = p.rate_dd_kids*vac_rate_2[p.doubledose_kids:end,1:2]
+        #vac_rate_booster[p.doubledose_kids:end] = vac_rate_booster[p.doubledose_kids:end]
+    end
 
     agebraks_vac::SVector{8, UnitRange{Int64}} = get_breaks_vac()#@SVector [0:0,1:4,5:14,15:24,25:44,45:64,65:74,75:100]
 
@@ -377,7 +387,7 @@ function main(ip::ModelParameters,sim::Int64)
     total_given::Int64 = 0
     count_relax::Int64 = 1
     if p.vaccinating
-        vac_ind = vac_selection(sim,5,agebraks_vac)
+        vac_ind = vac_selection(sim,16,agebraks_vac)
     else
         time_vac = 9999 #this guarantees that no one will be vaccinated
     end
@@ -409,6 +419,13 @@ function main(ip::ModelParameters,sim::Int64)
             count_change += 1
         end
 
+        if p.vaccinating
+            if st == p.time_vac_kids
+                vac_ind = vac_selection(sim,12,agebraks_vac)
+            elseif st == p.time_vac_kids2
+                vac_ind = vac_selection(sim,5,agebraks_vac)
+            end
+        end 
         # start of day
         #println("$st")
 
@@ -1195,13 +1212,13 @@ end
 export move_to_asymp
 
 function move_to_pre(x::Human)
-    if x.strain == 1 || x.strain == 3 || x.strain == 5 || x.strain == 6
+    if x.strain == 1 || x.strain == 3 || x.strain == 5 
         θ = (0.95, 0.9, 0.85, 0.6, 0.2)  # percentage of sick individuals going to mild infection stage
-    elseif x.strain == 2 || x.strain == 4
+    elseif x.strain == 2 || x.strain == 4 || x.strain == 6
         θ = (0.89, 0.78, 0.67, 0.48, 0.04)
-            if x.strain == 4
-                θ = map(y-> max(0,1-(1-y)*1.88),θ)
-            end
+        #= if x.strain == 4
+            θ = map(y-> max(0,1-(1-y)*1.88),θ)
+        end =#
     else
         error("no strain in move to pre")
     end  # percentage of sick individuals going to mild infection stage
@@ -1209,15 +1226,42 @@ function move_to_pre(x::Human)
     x.health_status = x.swap_status
     x.tis = 0   # reset time in state 
     x.exp = x.dur[3] # get the presymptomatic period
+    ##########
 
+    if x.recovered
+        index = Int(floor(x.days_recovered/7))
+        
+        if index > 0
+            if index <= size(waning_factors_rec,1)
+                aux = waning_factors_rec[index,3]
+            else
+                aux = waning_factors_rec[end,3]
+            end
+        else
+            aux = 1.0
+        end
 
-    if x.recovered || x.boosted
-        #recovered do not go to hospital
-        auxiliar = 0.0 #(1-aux)
+        aux_vac = x.vac_status*x.protected > 0 ? x.vac_eff_sev[x.strain][x.vac_status][x.protected] : 0.0
+
+        if  aux_vac >= aux
+            aux = aux_vac
+        end
+
+        auxiliar = (1-aux)
+
+        if x.strain == 6
+            auxiliar*(1-p.reduction_sev_omicron) #1-0.7 -> 0.3
+        end
     else
         aux = x.vac_status*x.protected > 0 ? x.vac_eff_sev[x.strain][x.vac_status][x.protected] : 0.0
         auxiliar = (1-aux)
+
+        if x.strain == 6 && x.boosted
+            auxiliar*(1-p.reduction_sev_omicron)
+        end
     end
+
+
 
     if rand() < (1-θ[x.ag])*auxiliar
         aux_v = [INF;INF2;INF3;INF4;INF5;INF6]
@@ -1297,11 +1341,11 @@ function move_to_inf(x::Human)
  
     # h = prob of hospital, c = prob of icu AFTER hospital    
     comh = 0.98
-    if x.strain == 1 || x.strain == 3 || x.strain == 5 || x.strain == 6
+    if x.strain == 1 || x.strain == 3 || x.strain == 5
         h = x.comorbidity == 1 ? comh : 0.04 #0.376
         c = x.comorbidity == 1 ? 0.396 : 0.25
 
-    elseif x.strain == 2 || x.strain == 4
+    elseif x.strain == 2 || x.strain == 4 || x.strain == 6
         if x.age <  20
             h = x.comorbidity == 1 ? comh : 0.05*1.07*1 #0.376
             c = x.comorbidity == 1 ? 0.396*1.07 : 0.25*1.07
@@ -1327,7 +1371,7 @@ function move_to_inf(x::Human)
             h = x.comorbidity == 1 ? comh : 0.05*1.60*1 #0.376
             c = x.comorbidity == 1 ? 0.396*1.60 : 0.25*1.60
         end
-        if x.strain == 4
+        if x.strain == 4 || x.strain == 6
             h = h*2.26
         end
     else
@@ -1531,6 +1575,7 @@ function move_to_recovered(h::Human)
     h.tis = 0 
     h.exp = 999 ## stay recovered indefinitely
     h.iso = false ## a recovered person has ability to meet others
+    h.recvac = 1
     
     _set_isolation(h, false)  # do not set the isovia property here.  
     # isolation property has no effect in contact dynamics anyways (unless x == SUS)
