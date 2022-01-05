@@ -278,15 +278,20 @@ function runsim(simnum, ip::ModelParameters)
     aux =  findall(x-> x.vaccine_n == 3 && x.age in range_work && x.vac_status == 2, humans)
     n_jensen_w_2 = length(aux)
 
-    aux = findall(x-> x.health == DED,humans)
+    pos = findall(y-> y in (11,22,33,44,55,66),hmatrix[:,end])
 
-    years_w_lost = sum(map(y-> max(0,range_work[end]-max(humans[y].age,range_work[1])),aux))
+    vector_ded::Vector{Int64} = zeros(Int64,100)
+
+    for i = pos
+        x = humans[i]
+        vector_ded[(x.age+1)] += 1
+    end
 
     return (a=all, g1=ag1, g2=ag2, g3=ag3, g4=ag4, g5=ag5,g6=ag6,g7=ag7, work = work,
-    cov1 = coverage1,cov2 = coverage2,cov12 = coverage12,cov22 = coverage22,
+    cov1 = coverage1,cov2 = coverage2,cov12 = coverage12,cov22 = coverage22,vector_dead=vector_ded,
     unvac_nr = unvac_unrec, unvac_r=unvac_rec, vac_1 = vac_1,vac_2 = vac_2, vac_3 = vac_3,
     n_pfizer = n_pfizer, n_moderna = n_moderna, n_jensen = n_jensen, n_pfizer_w = n_pfizer_w, n_moderna_w = n_moderna_w, n_jensen_w = n_jensen_w,
-    n_pfizer_2 = n_pfizer_2, n_moderna_2 = n_moderna_2, n_jensen_2 = n_jensen_2, n_pfizer_w_2 = n_pfizer_w_2, n_moderna_w_2 = n_moderna_w_2, n_jensen_w_2 = n_jensen_w_2,years_w_lost = years_w_lost, remaining = remaining_doses, total_given = total_given)
+    n_pfizer_2 = n_pfizer_2, n_moderna_2 = n_moderna_2, n_jensen_2 = n_jensen_2, n_pfizer_w_2 = n_pfizer_w_2, n_moderna_w_2 = n_moderna_w_2, n_jensen_w_2 = n_jensen_w_2, remaining = remaining_doses, total_given = total_given)
 end
 export runsim
 
@@ -1506,16 +1511,28 @@ function move_to_inf(x::Human)
             h = x.comorbidity == 1 ? comh : 0.05*1.60*1 #0.376
             c = x.comorbidity == 1 ? 0.396*1.60 : 0.25*1.60
         end
+                
         if x.strain == 4
-            
-            h = h*2.26 #https://www.thelancet.com/journals/laninf/article/PIIS1473-3099(21)00475-8/fulltext
-            
+            if !x.recovered && x.vac_status < 2
+                h = h*2.26 #https://www.thelancet.com/journals/laninf/article/PIIS1473-3099(21)00475-8/fulltext
+            elseif x.recovered || x.boosted #for booster, it is an assumption
+                h = h/6.7 #https://www.medrxiv.org/content/10.1101/2021.08.24.21262415v1
+            end
         elseif x.strain == 6
             #https://www.deseret.com/coronavirus/2021/12/31/22861222/omicron-variant-less-severe-covid-symptoms-deaths
             #https://jamanetwork.com/journals/jama/fullarticle/2787776?guestAccessKey=919da83d-b6f9-4e05-8de1-05cca4541a59&utm_source=silverchair&utm_medium=email&utm_campaign=article_alert-jama&utm_content=olf&utm_term=123021
             h = h*(1-p.reduction_sev_omicron) # 0.7
             c = c*(1-0.36)#https://jamanetwork.com/journals/jama/fullarticle/2787776?guestAccessKey=919da83d-b6f9-4e05-8de1-05cca4541a59&utm_source=silverchair&utm_medium=email&utm_campaign=article_alert-jama&utm_content=olf&utm_term=123021
-        end 
+            if x.recovered || x.boosted #for booster, it is an assumption
+                h = h/6.7 #https://www.medrxiv.org/content/10.1101/2021.08.24.21262415v1
+            end
+        elseif x.strain == 2
+            if x.recovered || x.boosted #for booster, it is an assumption
+                h = h/6.7 #https://www.medrxiv.org/content/10.1101/2021.08.24.21262415v1
+            end
+        else
+            error("in hospitalization")
+        end
     else
         error("no strain in movetoinf")
     end
