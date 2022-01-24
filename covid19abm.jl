@@ -1056,7 +1056,7 @@ function initialize()
         g = findfirst(y->y>=x.age,a)
         x.ag_new = g
         x.exp = 999  ## susceptible people don't expire.
-        x.dur = sample_epi_durations() # sample epi periods   
+          
         if rand() < p.eldq && x.ag == p.eldqag   ## check if elderly need to be quarantined.
             x.iso = true   
             x.isovia = :qu         
@@ -1091,7 +1091,7 @@ function insert_infected(health, num, ag,strain)
             x = humans[i]
             x.strain = strain
             x.first_one = true
-
+            x.dur = sample_epi_durations(x)
             if x.strain > 0
                 if health == PRE
                     x.swap = aux_pre[x.strain]
@@ -1234,12 +1234,24 @@ export time_update
     x.isovia == :null && (x.isovia = via)
 end
 
-function sample_epi_durations()
+function sample_epi_durations(y::Human)
     # when a person is sick, samples the 
-    lat_dist = Distributions.truncated(LogNormal(1.434, 0.661), 4, 7) # truncated between 4 and 7
-    pre_dist = Distributions.truncated(Gamma(1.058, 5/2.3), 0.8, 3)#truncated between 0.8 and 3
+    
+    if y.strain == 4
+        lat_dist = Distributions.truncated(LogNormal(1.249, 0.649), 3.5, 7) # truncated between 3.5 and 7
+        pre_dist = Distributions.truncated(Gamma(1.015, 1.975), 0.8, 2.2)#truncated between 0.8 and 2.2
+    elseif y.strain == 6
+        lat_dist = Distributions.truncated(LogNormal(0.99, 0.64), 3, 7) # truncated between 3 and 7
+        pre_dist = Distributions.truncated(Gamma(1.015, 1.975), 0.8, 2.2)#truncated between 0.8 and2.2
+
+    else
+        lat_dist = Distributions.truncated(LogNormal(1.434, 0.661), 4, 7) # truncated between 4 and 7
+        pre_dist = Distributions.truncated(Gamma(1.058, 5/2.3), 0.8, 3)#truncated between 0.8 and 3
+    end
+
     asy_dist = Gamma(5, 1)
     inf_dist = Gamma((3.2)^2/3.7, 3.7/3.2)
+
 
     latents = Int.(round.(rand(lat_dist)))
     pres = Int.(round.(rand(pre_dist)))
@@ -1950,6 +1962,8 @@ function dyntrans(sys_time, grps,sim)
                         aux_v = [LAT;LAT2;LAT3;LAT4;LAT5;LAT6]
                         y.swap = aux_v[y.strain]
                         y.swap_status = LAT
+
+                        y.dur = sample_epi_durations(y) # sample epi periods 
                         #y.swap = y.strain == 1 ? LAT : LAT2
                     end  
                 end
