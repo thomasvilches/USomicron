@@ -67,8 +67,8 @@ function run(myp::cv.ModelParameters, nsims=1000, folderprefix="./")
     for (k, df) in mydfs
         println("saving dataframe sim level: $k")
         # simulation level, save file per health status, per age group
-        for c in vcat(c1..., c2...)
-        #for c in vcat(c1...)
+        #for c in vcat(c1..., c2...)
+        for c in vcat(c1...)
         #for c in vcat(c2...)
             udf = unstack(df, :time, :sim, c) 
             fn = string("$(folderprefix)/simlevel_", lowercase(string(c)), "_", k, ".dat")
@@ -81,12 +81,6 @@ function run(myp::cv.ModelParameters, nsims=1000, folderprefix="./")
         #CSV.write(fn, yaf)       
     end
     
-   
-    R01 = [cdr[i].R01 for i=1:nsims]
-    R02 = [cdr[i].R02 for i=1:nsims]
-    writedlm(string(folderprefix,"/R01.dat"),R01)
-    writedlm(string(folderprefix,"/R02.dat"),R02)
-
     cov1 = [cdr[i].cov1 for i=1:nsims]
     cov2 = [cdr[i].cov2 for i=1:nsims]
     cov12 = [cdr[i].cov12 for i=1:nsims]
@@ -115,13 +109,18 @@ function run(myp::cv.ModelParameters, nsims=1000, folderprefix="./")
     remaining = [cdr[i].remaining for i=1:nsims]
     total = [cdr[i].total_given for i=1:nsims]
 
+
+
     writedlm(string(folderprefix,"/vaccine_all.dat"),[vac_p vac_m vac_j vac_p_2 vac_m_2 vac_j_2 remaining total])
     writedlm(string(folderprefix,"/vaccine_working.dat"),[vac_p_w vac_m_w vac_j_w vac_p_w_2 vac_m_w_2 vac_j_w_2])
 
-    writedlm(string(folderprefix,"/year_of_work.dat"),[cdr[i].years_w_lost for i=1:nsims])
-
     writedlm(string(folderprefix,"/year_of_death.dat"),hcat([cdr[i].vector_dead for i=1:nsims]...))
-    
+
+    writedlm(string(folderprefix,"/unvac_r.dat"),[cdr[i].unvac_r for i=1:nsims])
+    writedlm(string(folderprefix,"/unvac_nr.dat"),[cdr[i].unvac_nr for i=1:nsims])
+    writedlm(string(folderprefix,"/vac_1.dat"),[cdr[i].vac_1 for i=1:nsims])
+    writedlm(string(folderprefix,"/vac_2.dat"),[cdr[i].vac_2 for i=1:nsims])
+    writedlm(string(folderprefix,"/vac_3.dat"),[cdr[i].vac_3 for i=1:nsims])
 
     return mydfs
 end
@@ -145,7 +144,7 @@ end
 
 
 
-function run_param_scen_cal(calibrating::Bool,b::Float64,province::String="us",h_i::Int64 = 0,ic1::Int64=1,ic2::Int64=1,ic3::Int64=1,ic4::Int64=1,ic5::Int64=1,ic6::Int64=1,when2::Int64=1,when3::Int64 = 1,when4::Int64=1,when5::Int64=1,when6::Int64=1,index::Int64 = 0,dosis::Int64=3,ta::Int64 = 999,rc=[0.0],dc=[0],mt::Int64=500,vac::Bool=true,when_relax::Int64 = 999,turnon_::Int64 = 1,waning::Int64 = 1, red::Float64 = 0.0, trans::Float64 = 1.0, redred::Float64 = 0.0,vb::Bool = true,scen::String="statuscuo",alpha::Float64 = 1.0,alpha2::Float64 = 0.0,alpha3::Float64 = 1.0,nsims::Int64=500)
+function run_param_scen_cal(calibrating::Bool,b::Float64,province::String="us",h_i::Int64 = 0,ic1::Int64=1,ic2::Int64=1,ic3::Int64=1,ic4::Int64=1,ic5::Int64=1,ic6::Int64=1,when2::Int64=1,when3::Int64 = 1,when4::Int64=1,when5::Int64=1,when6::Int64=1,index::Int64 = 0,dosis::Int64=3,ta::Int64 = 999,rc=[0.0],dc=[0],mt::Int64=500,vac::Bool=true,when_relax::Int64 = 999,turnon_::Int64 = 1,waning::Int64 = 1, red::Float64 = 0.0, trans::Float64 = 1.0, redred::Float64 = 0.0,nb::Int64 = 1,ddkids::Int64=999,rate_kids::Float64 = 2.0,boost_inc_day::Int64 = 999,bost_inc::Float64 = 1.0,change_elig::Int64 = 999,ba::Vector{Int64}=[180;180;999],nsims::Int64=500)
     
     
     #b = bd[h_i]
@@ -154,16 +153,20 @@ function run_param_scen_cal(calibrating::Bool,b::Float64,province::String="us",h
     herd = $(h_i),start_several_inf=true,initialinf3=$ic3,initialinf6=$ic6,initialinf=$ic1,initialinf2=$ic2,initialinf5=$ic5,initialinf4=$ic4,
     time_sec_strain = $when2,time_third_strain = $when3,time_fourth_strain = $when4,time_fifth_strain = $when5,time_sixth_strain = $when6,
     status_relax = $dosis, relax_after = $ta,file_index = $index,
-    modeltime=$mt, prov = Symbol($province), scenario = Symbol($scen), α = $alpha,
+    modeltime=$mt, prov = Symbol($province),
     time_change_contact = $dc,
     change_rate_values = $rc,
-    α2 = $alpha2,
-    α3 = $alpha3,
     reduction_omicron = $red,
     rel_trans_sixth = $trans,
-    vac_boost = $vb,
+    n_boosts = $nb,
+    doubledose_kids = $ddkids,
     reduction_reduction = $redred,
-    time_back_to_normal=$when_relax, turnon = $turnon_,waning = $waning)
+    change_booster_eligibility = $change_elig,
+    booster_after_bkup = $ba,
+    booster_increase = $boost_inc_day,
+    increase_booster_rate = $bost_inc,
+    rate_dd_kids = $rate_kids,
+    doubledose=$when_relax, turnon = $turnon_,waning = $waning)
 
     folder = create_folder(ip,province,calibrating)
 
