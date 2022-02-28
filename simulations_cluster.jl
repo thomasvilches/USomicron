@@ -18,7 +18,7 @@ using DelimitedFiles
 
 #@everywhere using covid19abm
 
-addprocs(SlurmManager(512), N=16, topology=:master_worker, exeflags = "--project=.")
+addprocs(SlurmManager(500), N=16, topology=:master_worker, exeflags = "--project=.")
 @everywhere using Parameters, Distributions, StatsBase, StaticArrays, Random, Match, DataFrames
 @everywhere include("covid19abm.jl")
 @everywhere const cv=covid19abm
@@ -60,8 +60,9 @@ function run(myp::cv.ModelParameters, nsims=1000, folderprefix="./")
     #c1 = Symbol.((:LAT, :ASYMP, :INF, :PRE, :MILD,:IISO, :HOS, :ICU, :DED), :_INC)
     #c2 = Symbol.((:LAT, :ASYMP, :INF, :PRE, :MILD,:IISO, :HOS, :ICU, :DED), :_PREV)
     
-    c1 = Symbol.((:LAT, :HOS, :ICU, :DED,:LAT2, :HOS2, :ICU2, :DED2,:LAT3, :HOS3, :ICU3, :DED3,:LAT4, :HOS4, :ICU4, :DED4,:LAT5, :HOS5, :ICU5, :DED5,:LAT6, :HOS6, :ICU6, :DED6), :_INC)
-    c2 = Symbol.((:LAT, :HOS, :ICU, :DED,:LAT2, :HOS2, :ICU2, :DED2,:LAT3, :HOS3, :ICU3, :DED3,:LAT4, :HOS4, :ICU4, :DED4,:LAT5, :HOS5, :ICU5, :DED5,:LAT6, :HOS6, :ICU6, :DED6), :_PREV)
+    c1 = Symbol.((:LAT, :ASYMP, :MILD, :INF, :HOS, :ICU, :DED,:LAT2, :ASYMP2, :MILD2, :INF2, :HOS2, :ICU2, :DED2,:LAT3, :ASYMP3, :MILD3, :INF3, :HOS3, :ICU3, :DED3,:LAT4, :ASYMP4, :MILD4, :INF4, :HOS4, :ICU4, :DED4,:LAT5, :ASYMP5, :MILD5, :INF5, :HOS5, :ICU5, :DED5,:LAT6, :ASYMP6, :MILD6, :INF6, :HOS6, :ICU6, :DED6), :_INC)
+    #c2 = Symbol.((:LAT, :MILD, :INF, :HOS, :ICU, :DED,:LAT2, :MILD2, :INF2, :HOS2, :ICU2, :DED2,:LAT3, :MILD3, :INF3, :HOS3, :ICU3, :DED3,:LAT4, :MILD4, :INF4, :HOS4, :ICU4, :DED4,:LAT5, :MILD5, :INF5, :HOS5, :ICU5, :DED5,:LAT6, :MILD6, :INF6, :HOS6, :ICU6, :DED6), :_PREV)
+    #c2 = Symbol.((:HOS, :ICU,:HOS2, :ICU2, :HOS3, :ICU3, :HOS4, :ICU4, :HOS5, :ICU5, :HOS6, :ICU6), :_PREV)
     
     #c2 = Symbol.((:LAT, :HOS, :ICU, :DED,:LAT2, :HOS2, :ICU2, :DED2), :_PREV)
     for (k, df) in mydfs
@@ -106,35 +107,74 @@ function run(myp::cv.ModelParameters, nsims=1000, folderprefix="./")
     vac_j_2 = [cdr[i].n_jensen_2 for i=1:nsims]
     vac_j_w_2 = [cdr[i].n_jensen_w_2 for i=1:nsims]
 
+    vac_m_3 = [cdr[i].n_moderna_3 for i=1:nsims]
+    vac_m_w_3 = [cdr[i].n_moderna_w_3 for i=1:nsims]
+
+    vac_p_3 = [cdr[i].n_pfizer_3 for i=1:nsims]
+    vac_p_w_3 = [cdr[i].n_pfizer_w_3 for i=1:nsims]
+
+    vac_j_3 = [cdr[i].n_jensen_3 for i=1:nsims]
+    vac_j_w_3 = [cdr[i].n_jensen_w_3 for i=1:nsims]
+
     remaining = [cdr[i].remaining for i=1:nsims]
     total = [cdr[i].total_given for i=1:nsims]
 
 
 
-    writedlm(string(folderprefix,"/vaccine_all.dat"),[vac_p vac_m vac_j vac_p_2 vac_m_2 vac_j_2 remaining total])
-    writedlm(string(folderprefix,"/vaccine_working.dat"),[vac_p_w vac_m_w vac_j_w vac_p_w_2 vac_m_w_2 vac_j_w_2])
+    writedlm(string(folderprefix,"/vaccine_all.dat"),[vac_p vac_m vac_j vac_p_2 vac_m_2 vac_j_2 vac_p_3 vac_m_3 vac_j_3 remaining total])
+    writedlm(string(folderprefix,"/vaccine_working.dat"),[vac_p_w vac_m_w vac_j_w vac_p_w_2 vac_m_w_2 vac_j_w_2 vac_p_w_3 vac_m_w_3 vac_j_w_3])
 
     writedlm(string(folderprefix,"/year_of_death.dat"),hcat([cdr[i].vector_dead for i=1:nsims]...))
 
-    writedlm(string(folderprefix,"/unvac_r.dat"),[cdr[i].unvac_r for i=1:nsims])
-    writedlm(string(folderprefix,"/unvac_nr.dat"),[cdr[i].unvac_nr for i=1:nsims])
-    writedlm(string(folderprefix,"/vac_1.dat"),[cdr[i].vac_1 for i=1:nsims])
-    writedlm(string(folderprefix,"/vac_2.dat"),[cdr[i].vac_2 for i=1:nsims])
-    writedlm(string(folderprefix,"/vac_3.dat"),[cdr[i].vac_3 for i=1:nsims])
+    writedlm(string(folderprefix,"/lat_vac_1.dat"),hcat([cdr[i].lat for i=1:nsims]...))
+    writedlm(string(folderprefix,"/lat_vac_2.dat"),hcat([cdr[i].lat2 for i=1:nsims]...))
+    writedlm(string(folderprefix,"/lat_vac_3.dat"),hcat([cdr[i].lat3 for i=1:nsims]...))
+    writedlm(string(folderprefix,"/lat_unvac_r.dat"),hcat([cdr[i].lat4 for i=1:nsims]...))
+    writedlm(string(folderprefix,"/lat_unvac_nr.dat"),hcat([cdr[i].lat5 for i=1:nsims]...))
+    writedlm(string(folderprefix,"/lat_vac_1_r.dat"),hcat([cdr[i].lat6 for i=1:nsims]...))
+    writedlm(string(folderprefix,"/lat_vac_2_r.dat"),hcat([cdr[i].lat7 for i=1:nsims]...))
+    writedlm(string(folderprefix,"/lat_vac_3_r.dat"),hcat([cdr[i].lat8 for i=1:nsims]...))
+
+    writedlm(string(folderprefix,"/hos_vac_1.dat"),hcat([cdr[i].hos for i=1:nsims]...))
+    writedlm(string(folderprefix,"/hos_vac_2.dat"),hcat([cdr[i].hos2 for i=1:nsims]...))
+    writedlm(string(folderprefix,"/hos_vac_3.dat"),hcat([cdr[i].hos3 for i=1:nsims]...))
+    writedlm(string(folderprefix,"/hos_unvac_r.dat"),hcat([cdr[i].hos4 for i=1:nsims]...))
+    writedlm(string(folderprefix,"/hos_unvac_nr.dat"),hcat([cdr[i].hos5 for i=1:nsims]...))
+    writedlm(string(folderprefix,"/hos_vac_1_r.dat"),hcat([cdr[i].hos6 for i=1:nsims]...))
+    writedlm(string(folderprefix,"/hos_vac_2_r.dat"),hcat([cdr[i].hos7 for i=1:nsims]...))
+    writedlm(string(folderprefix,"/hos_vac_3_r.dat"),hcat([cdr[i].hos8 for i=1:nsims]...))
+
+    writedlm(string(folderprefix,"/icu_vac_1.dat"),hcat([cdr[i].icu for i=1:nsims]...))
+    writedlm(string(folderprefix,"/icu_vac_2.dat"),hcat([cdr[i].icu2 for i=1:nsims]...))
+    writedlm(string(folderprefix,"/icu_vac_3.dat"),hcat([cdr[i].icu3 for i=1:nsims]...))
+    writedlm(string(folderprefix,"/icu_unvac_r.dat"),hcat([cdr[i].icu4 for i=1:nsims]...))
+    writedlm(string(folderprefix,"/icu_unvac_nr.dat"),hcat([cdr[i].icu5 for i=1:nsims]...))
+    writedlm(string(folderprefix,"/icu_vac_1_r.dat"),hcat([cdr[i].icu6 for i=1:nsims]...))
+    writedlm(string(folderprefix,"/icu_vac_2_r.dat"),hcat([cdr[i].icu7 for i=1:nsims]...))
+    writedlm(string(folderprefix,"/icu_vac_3_r.dat"),hcat([cdr[i].icu8 for i=1:nsims]...))
+
+    writedlm(string(folderprefix,"/ded_vac_1.dat"),hcat([cdr[i].ded for i=1:nsims]...))
+    writedlm(string(folderprefix,"/ded_vac_2.dat"),hcat([cdr[i].ded2 for i=1:nsims]...))
+    writedlm(string(folderprefix,"/ded_vac_3.dat"),hcat([cdr[i].ded3 for i=1:nsims]...))
+    writedlm(string(folderprefix,"/ded_unvac_r.dat"),hcat([cdr[i].ded4 for i=1:nsims]...))
+    writedlm(string(folderprefix,"/ded_unvac_nr.dat"),hcat([cdr[i].ded5 for i=1:nsims]...))
+    writedlm(string(folderprefix,"/ded_vac_1_r.dat"),hcat([cdr[i].ded6 for i=1:nsims]...))
+    writedlm(string(folderprefix,"/ded_vac_2_r.dat"),hcat([cdr[i].ded7 for i=1:nsims]...))
+    writedlm(string(folderprefix,"/ded_vac_3_r.dat"),hcat([cdr[i].ded8 for i=1:nsims]...))
 
     return mydfs
 end
 
 
-function create_folder(ip::cv.ModelParameters,province="us",calibrating = true)
+function create_folder(ip::cv.ModelParameters,province="newyorkcity",calibrating = true)
     
     #RF = string("heatmap/results_prob_","$(replace(string(ip.β), "." => "_"))","_vac_","$(replace(string(ip.vaccine_ef), "." => "_"))","_herd_immu_","$(ip.herd)","_$strategy","cov_$(replace(string(ip.cov_val)))") ## 
-    main_folder = "/data/thomas-covid/USomicron"
+    main_folder = "/data/thomas-covid/ROI"
     #main_folder = "."
     if calibrating
-        RF = string(main_folder,"/results_prob_","$(replace(string(ip.β), "." => "_"))","_herd_immu_","$(ip.herd)","_$(ip.file_index)_$(province)") ##  
+        RF = string(main_folder,"/results_prob_","$(replace(string(ip.β), "." => "_"))","_$(ip.file_index)_$(province)") ##  
     else
-        RF = string(main_folder,"/results_prob_","$(replace(string(ip.β), "." => "_"))","_herd_immu_","$(ip.herd)","_$(ip.file_index)_$(province)_$(ip.reduction_omicron)_$(ip.rel_trans_sixth)_$(ip.reduction_reduction)") ##  
+        RF = string(main_folder,"/results_prob_$(ip.file_index)_$(province)") ##  
     end
     if !Base.Filesystem.isdir(RF)
         Base.Filesystem.mkpath(RF)
@@ -144,29 +184,17 @@ end
 
 
 
-function run_param_scen_cal(calibrating::Bool,b::Float64,province::String="us",h_i::Int64 = 0,ic1::Int64=1,ic2::Int64=1,ic3::Int64=1,ic4::Int64=1,ic5::Int64=1,ic6::Int64=1,when2::Int64=1,when3::Int64 = 1,when4::Int64=1,when5::Int64=1,when6::Int64=1,index::Int64 = 0,dosis::Int64=3,ta::Int64 = 999,rc=[0.0],dc=[0],mt::Int64=500,vac::Bool=true,when_relax::Int64 = 999,turnon_::Int64 = 1,waning::Int64 = 1, red::Float64 = 0.0, trans::Float64 = 1.0, redred::Float64 = 0.0,nb::Int64 = 1,ddkids::Int64=999,rate_kids::Float64 = 2.0,boost_inc_day::Int64 = 999,bost_inc::Float64 = 1.0,change_elig::Int64 = 999,ba::Vector{Int64}=[180;180;999],nsims::Int64=500)
+function run_param_scen_cal(calibrating::Bool,b::Float64,province::String="usa",ic1::Int64=1,ic2::Int64=1,ic3::Int64=1,ic4::Int64=1,ic5::Int64=1,ic6::Int64=1,index::Int64 = 0,rc=[0.0],dc=[0],mt::Int64=500,vac::Bool=true,tbn::Int64 = 999,ro::Int64 = 1,nsims::Int64=500)
     
     
     #b = bd[h_i]
     #ic = init_con[h_i]
     @everywhere ip = cv.ModelParameters(β=$b,fsevere = 1.0,fmild = 1.0,vaccinating = $vac,
-    herd = $(h_i),start_several_inf=true,initialinf3=$ic3,initialinf6=$ic6,initialinf=$ic1,initialinf2=$ic2,initialinf5=$ic5,initialinf4=$ic4,
-    time_sec_strain = $when2,time_third_strain = $when3,time_fourth_strain = $when4,time_fifth_strain = $when5,time_sixth_strain = $when6,
-    status_relax = $dosis, relax_after = $ta,file_index = $index,
+    start_several_inf=true,initialinf3=$ic3,initialinf6=$ic6,initialinf=$ic1,initialinf2=$ic2,initialinf5=$ic5,initialinf4=$ic4,
+    status_relax = 2, relax_after = 14,file_index = $index,
     modeltime=$mt, prov = Symbol($province),
     time_change_contact = $dc,
-    change_rate_values = $rc,
-    reduction_omicron = $red,
-    rel_trans_sixth = $trans,
-    n_boosts = $nb,
-    doubledose_kids = $ddkids,
-    reduction_reduction = $redred,
-    change_booster_eligibility = $change_elig,
-    booster_after_bkup = $ba,
-    booster_increase = $boost_inc_day,
-    increase_booster_rate = $bost_inc,
-    rate_dd_kids = $rate_kids,
-    doubledose=$when_relax, turnon = $turnon_,waning = $waning)
+    change_rate_values = $rc,time_back_to_normal = $tbn,relax_over = $ro)
 
     folder = create_folder(ip,province,calibrating)
 
