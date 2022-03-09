@@ -935,7 +935,7 @@ function temporal_proportion()
     
     if p.prov == :usa
         v = [1]
-        fd = [0.561 0.369 0.07]
+        fd = [0.561 0.369 0.0]
         sd = [0.561 0.369 0.0]
     else
         
@@ -954,7 +954,7 @@ end
 function get_breaks_vac()
 
     if p.prov == :usa
-        brak = @SVector [5:11,12:17, 18:24, 25:39, 40:49, 50:64, 65:74, 75:100]
+        brak = @SVector [5:11, 12:17, 18:24, 25:39, 40:49, 50:64, 65:74, 75:100]
     else
         #brak = @SVector [12:15, 16:17, 18:24, 25:39, 40:49, 50:64, 65:74, 75:100]
         error("no age breaks")

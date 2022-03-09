@@ -78,35 +78,36 @@ end
     #vaccine_ef::Float16 = 0.0   ## change this to Float32 typemax(Float32) typemax(Float64)
     vac_com_dec_max::Float16 = 0.0 # how much the comorbidity decreases the vac eff
     vac_com_dec_min::Float16 = 0.0 # how much the comorbidity decreases the vac eff
-    herd::Int8 = 10 #typemax(Int32) ~ millions
+    herd::Int8 = 0 #typemax(Int32) ~ millions
     file_index::Int16 = 0
     nstrains::Int16 = 6
     
     vaccinating::Bool = true #vaccinating?
     red_risk_perc::Float64 = 1.0 #relative isolation in vaccinated individuals
     
+
     ##Alpha - B.1.1.7
     sec_strain_trans::Float64 = 1.5#1.5 #transmissibility of second strain
     ins_sec_strain::Bool = true #insert second strain?
     initialinf2::Int64 = 1 #number of initial infected of second strain
-    time_sec_strain::Int64 = 92 #when will the second strain introduced -- Jan 3
+    time_sec_strain::Int64 = 90 #when will the second strain introduced -- Jan 3
 
     ## Gamma - P.1
     ins_third_strain::Bool = true #insert third strain?
     initialinf3::Int64 = 1 #number of initial infected of third strain
-    time_third_strain::Int64 = 201 #when will the third strain introduced - P1 March 20
+    time_third_strain::Int64 = 148 #when will the third strain introduced - P1 March 20
     third_strain_trans::Float64 = 1.6 #transmissibility of third strain
     
     ## Delta - B.1.617.2
     ins_fourth_strain::Bool = true #insert fourth strain?
     initialinf4::Int64 = 1 #number of initial infected of fourth strain
-    time_fourth_strain::Int64 = 173 #when will the fourth strain introduced
+    time_fourth_strain::Int64 = 163 #when will the fourth strain introduced
     fourth_strain_trans::Float64 = 1.3 #transmissibility compared to second strain strain
 
     ## Iota - B.1.526
     ins_fifth_strain::Bool = true #insert fifth strain?
     initialinf5::Int64 = 1 #number of initial infected of fifth strain
-    time_fifth_strain::Int64 = 7 #when will the fifth strain introduced
+    time_fifth_strain::Int64 = 55 #when will the fifth strain introduced
     fifth_strain_trans::Float64 = 1.35 #transmissibility of fifth strain
 
     ##OMICRON
@@ -184,6 +185,7 @@ end
     #one waning rate for each efficacy? For each strain? I can change this structure based on that
 
     waning::Int64 = 1
+    reduce_days::Int64 = 0
     ### after calibration, how much do we want to increase the contact rate... in this case, to reach 70%
     ### 0.5*0.95 = 0.475, so we want to multiply this by 1.473684211
 end
@@ -215,7 +217,7 @@ function runsim(simnum, ip::ModelParameters)
     # function runs the `main` function, and collects the data as dataframes. 
     hmatrix, remaining_doses, total_given, lat,hos, icu, ded,lat2, hos2, icu2, ded2,lat3, hos3, icu3, ded3, lat4, hos4, icu4, ded4, lat5, hos5, icu5, ded5, lat6, hos6, icu6, ded6, lat7, hos7, icu7, ded7, lat8, hos8, icu8, ded8  = main(ip,simnum)            
 
-    ###use here to create the vector of comorbidity
+    # use here to create the vector of comorbidity
     # get simulation age groups
     #ags = [x.ag for x in humans] # store a vector of the age group distribution 
     #ags = [x.ag_new for x in humans] # store a vector of the age group distribution 
@@ -226,7 +228,8 @@ function runsim(simnum, ip::ModelParameters)
     spl = _splitstate(hmatrix, ags)
     work = _collectdf(spl[1])
     
-    age_groups = [0:4, 5:11, 12:17, 18:49, 50:64, 65:79, 80:999]
+    
+    age_groups = [0:4, 5:17, 18:29, 30:39, 40:49, 50:64, 65:74, 75:84, 85:999]
     ags = map(x->findfirst(y-> x.age in y, age_groups),humans) # store a vector of the age group distribution 
     spl = _splitstate(hmatrix, ags)
     ag1 = _collectdf(spl[1])
@@ -236,10 +239,12 @@ function runsim(simnum, ip::ModelParameters)
     ag5 = _collectdf(spl[5])
     ag6 = _collectdf(spl[6])
     ag7 = _collectdf(spl[7])
+    ag8 = _collectdf(spl[8])
+    ag9 = _collectdf(spl[9])
     insertcols!(all, 1, :sim => simnum); insertcols!(ag1, 1, :sim => simnum); insertcols!(ag2, 1, :sim => simnum); 
     insertcols!(ag3, 1, :sim => simnum); insertcols!(ag4, 1, :sim => simnum); insertcols!(ag5, 1, :sim => simnum);
-    insertcols!(ag6, 1, :sim => simnum); insertcols!(ag7, 1, :sim => simnum); insertcols!(work, 1, :sim => simnum);
-    
+    insertcols!(ag6, 1, :sim => simnum); insertcols!(ag7, 1, :sim => simnum); insertcols!(ag8, 1, :sim => simnum); 
+    insertcols!(ag9, 1, :sim => simnum); insertcols!(work, 1, :sim => simnum);
 
     coverage1 = length(findall(x-> x.age >= 18 && x.vac_status >= 1,humans))/length(findall(x-> x.age >= 18,humans))
     coverage2 = length(findall(x-> x.age >= 18 && x.vac_status == 2,humans))/length(findall(x-> x.age >= 18,humans))
@@ -300,7 +305,7 @@ function runsim(simnum, ip::ModelParameters)
     end
 
     return (lat=lat, hos=hos, icu=icu, ded=ded, lat2=lat2, hos2=hos2, icu2=icu2, ded2=ded2, lat3=lat3, hos3=hos3, icu3=icu3, ded3=ded3, lat4=lat4, hos4=hos4, icu4=icu4, ded4=ded4, lat5=lat5, hos5=hos5, icu5=icu5, ded5=ded5, lat6=lat6, hos6=hos6, icu6=icu6, ded6=ded6, lat7=lat7, hos7=hos7, icu7=icu7, ded7=ded7, lat8=lat8, hos8=hos8, icu8=icu8, ded8=ded8,
-    a=all, g1=ag1, g2=ag2, g3=ag3, g4=ag4, g5=ag5,g6=ag6,g7=ag7, work = work,
+    a=all, g1=ag1, g2=ag2, g3=ag3, g4=ag4, g5=ag5,g6=ag6,g7=ag7,g8=ag8,g9=ag9, work = work,
     cov1 = coverage1,cov2 = coverage2,cov12 = coverage12,cov22 = coverage22,vector_dead=vector_ded,
     n_pfizer = n_pfizer, n_moderna = n_moderna, n_jensen = n_jensen, n_pfizer_w = n_pfizer_w, n_moderna_w = n_moderna_w, n_jensen_w = n_jensen_w,
     n_pfizer_2 = n_pfizer_2, n_moderna_2 = n_moderna_2, n_jensen_2 = n_jensen_2, n_pfizer_w_2 = n_pfizer_w_2, n_moderna_w_2 = n_moderna_w_2, n_jensen_w_2 = n_jensen_w_2, 
@@ -411,6 +416,11 @@ function main(ip::ModelParameters,sim::Int64)
 
         for st = vtimes[vv[ii]]:(vtimes[vv[ii+1]]-1)
             
+            for x in humans
+                if x.vaccine_n == 3
+                    error("$x")
+                end
+            end
             if length(p.time_change_contact) >= count_change && p.time_change_contact[count_change] == st ###change contact pattern throughout the time
                 setfield!(p, :contact_change_rate, p.change_rate_values[count_change])
                 count_change += 1
@@ -443,7 +453,7 @@ function main(ip::ModelParameters,sim::Int64)
                 time_pos += 1
             end
 
-            if time_prop < length(v_prop) && st == v_prop[time_prop]
+            if time_prop <= length(v_prop) && st == v_prop[time_prop]
                 setfield!(p, :vaccine_proportion, fd_prop[time_prop,:])
                 setfield!(p, :vaccine_proportion_2, sd_prop[time_prop,:])
                 time_prop += 1
@@ -486,6 +496,7 @@ function waning_immunity(x::Human)
     index = Int(floor(x.days_vac/7))
     if index > 0
         if index <= size(waning_factors,1)
+           # print(x.vaccine_n)
             waning = [waning_factors[index,x.vaccine_n]^p.waning; waning_factors[index,x.vaccine_n+2]^p.waning]
         else
             waning = [waning_factors[end,x.vaccine_n]^p.waning; waning_factors[end,x.vaccine_n+2]^p.waning]
@@ -520,6 +531,7 @@ function vac_time!(sim::Int64,vac_ind::Vector{Vector{Int64}},time_pos::Int64,vac
     remaining_doses::Int64 = 0
     total_given::Int64 = 0
 
+    print(p.vaccine_proportion)
     ### Let's calculate the number of available doses per vaccine type
     doses_first::Vector{Int64} = Int.(round.(sum(vac_rate_1[time_pos,:])*(p.vaccine_proportion/sum(p.vaccine_proportion))))
     doses_second::Vector{Int64} = Int.(round.(sum(vac_rate_2[time_pos,:])*(p.vaccine_proportion_2/sum(p.vaccine_proportion_2))))
@@ -660,11 +672,9 @@ function vac_time!(sim::Int64,vac_ind::Vector{Vector{Int64}},time_pos::Int64,vac
         if vac == 1
             pos = map(k->findall(y-> humans[y].vac_status == 1 && humans[y].vaccine_n == vac && humans[y].days_vac >= p.vac_period[humans[y].vaccine_n] && !(humans[y].health_status in aux_states),vac_ind[k]),1:length(vac_ind))
             pos2 = map(k->findall(y-> humans[y].vac_status == 0 && !(humans[y].health_status in aux_states),vac_ind[k]),1:length(vac_ind))
-        
         elseif vac == 2
             pos = map(k->findall(y-> humans[y].vac_status == 1 && humans[y].vaccine_n == vac && humans[y].days_vac >= p.vac_period[humans[y].vaccine_n] && !(humans[y].health_status in aux_states),vac_ind[k]),1:length(vac_ind))
             pos2 = map(k->findall(y-> humans[y].vac_status == 0 && humans[y].age >= 18 && !(humans[y].health_status in aux_states),vac_ind[k]),1:length(vac_ind))
-        
         else
             pos = map(k->findall(y-> humans[y].vac_status == 1 && humans[y].vaccine_n == vac && humans[y].days_vac >= p.vac_period[humans[y].vaccine_n] && !(humans[y].health_status in aux_states),vac_ind[k]),1:length(vac_ind))
             pos2 = map(k->findall(y-> humans[y].vac_status == 0 && humans[y].age >= 18 && !(humans[y].health_status in aux_states),vac_ind[k]),1:length(vac_ind))
@@ -1206,12 +1216,14 @@ function sample_epi_durations(y::Human)
     asy_dist = Gamma(5, 1)
     inf_dist = Gamma((3.2)^2/3.7, 3.7/3.2)
 
+    aux = y.vac_status > 1 || y.recovered ? p.reduce_days : 0
 
     latents = Int.(round.(rand(lat_dist)))
     pres = Int.(round.(rand(pre_dist)))
     latents = latents - pres # ofcourse substract from latents, the presymp periods
-    asymps = Int.(ceil.(rand(asy_dist)))
-    infs = Int.(ceil.(rand(inf_dist)))
+    asymps = max(Int.(ceil.(rand(asy_dist)))-aux,1)
+    infs = max(Int.(ceil.(rand(inf_dist)))-aux,1)
+
     return (latents, asymps, pres, infs)
 end
 
@@ -1451,6 +1463,7 @@ function move_to_inf(x::Human)
     # h = prob of hospital, c = prob of icu AFTER hospital    
     comh = 0.98
     if x.strain == 1 || x.strain == 3 || x.strain == 5
+        comh = 0.65
         h = x.comorbidity == 1 ? comh : 0.04 #0.376
         c = x.comorbidity == 1 ? 0.396 : 0.25
 
@@ -1486,19 +1499,21 @@ function move_to_inf(x::Human)
         C. M aslo, et al., Characteristics and Outcomes of Hospitalized Patients in South Africa During the COVID-19 Omicron Wave Compared With Previous Waves. JAMA (2021) https:/doi.org/10.1001/jama.2021.24868.
         =#
         if x.strain == 4
+            h = 0.9*h
             if !x.recovered && x.vac_status < 2
-                h = h*2.26 #https://www.thelancet.com/journals/laninf/article/PIIS1473-3099(21)00475-8/fulltext
+                h = h*2.8 #2.26 #https://www.thelancet.com/journals/laninf/article/PIIS1473-3099(21)00475-8/fulltext
             elseif x.recovered || x.boosted #for booster, it is an assumption
                 h = h/p.hosp_red #
             end
         elseif x.strain == 6
-
-            h = h*(1-0.5*p.reduction_sev_omicron) # 0.7
+            h = 0.85*h
+            h = h*(1-0.4*p.reduction_sev_omicron) # 0.7
             c = c*(1-0.381)#
             if x.recovered || x.boosted #for booster, it is an assumption
                 h = h/p.hosp_red
             end
         elseif x.strain == 2
+            h = 0.72*h
             if x.recovered || x.boosted #for booster, it is an assumption
                 h = h/p.hosp_red 
             end
@@ -1614,19 +1629,18 @@ function move_to_hospicu(x::Human)
 
     elseif x.strain == 2  || x.strain == 4  || x.strain == 6
     
-        mh = 0.5*[0.0016, 0.0016, 0.0025, 0.0107, 0.02, 0.038, 0.15, 0.66]
-        mc = 0.5*[0.0033, 0.0033, 0.0036, 0.0131, 0.022, 0.04, 0.2, 0.70]
+        mh = 0.7*[0.0016, 0.0016, 0.0025, 0.0107, 0.02, 0.038, 0.15, 0.66]
+        mc = 0.7*[0.0033, 0.0033, 0.0036, 0.0131, 0.022, 0.04, 0.2, 0.70]
         
         if x.strain == 4
-            mh = 1.0*mh
-            mc = 1.0*mc
+            mh = 0.55*mh
+            mc = 0.55*mc
         elseif x.strain == 6
-            mh = (1-0.75*p.reduction_sev_omicron)*mh
-            mc = (1-0.75*p.reduction_sev_omicron)*mc
+            mh = (1-0.77*p.reduction_sev_omicron)*mh
+            mc = (1-0.77*p.reduction_sev_omicron)*mc
         end
 
     else
-      
             error("No strain - hospicu")
     end
     

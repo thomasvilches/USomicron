@@ -42,16 +42,17 @@ function run(myp::cv.ModelParameters, nsims=1000, folderprefix="./")
     ## stack the sims together
     allag = vcat([cdr[i].a  for i = 1:nsims]...)
     working = vcat([cdr[i].work for i = 1:nsims]...)
-   
     ag1 = vcat([cdr[i].g1 for i = 1:nsims]...)
     ag2 = vcat([cdr[i].g2 for i = 1:nsims]...)
     ag3 = vcat([cdr[i].g3 for i = 1:nsims]...)
     ag4 = vcat([cdr[i].g4 for i = 1:nsims]...)
     ag5 = vcat([cdr[i].g5 for i = 1:nsims]...)
     ag6 = vcat([cdr[i].g6 for i = 1:nsims]...)
-    ag7 = vcat([cdr[i].g7 for i = 1:nsims]...) 
+    ag7 = vcat([cdr[i].g7 for i = 1:nsims]...)
+    ag8 = vcat([cdr[i].g8 for i = 1:nsims]...) 
+    ag9 = vcat([cdr[i].g9 for i = 1:nsims]...)  
 
-    mydfs = Dict("all" => allag, "ag1" => ag1, "ag2" => ag2, "ag3" => ag3, "ag4" => ag4, "ag5" => ag5, "ag6" => ag6,"ag7" => ag7, "working"=>working)
+    mydfs = Dict("all" => allag, "ag1" => ag1, "ag2" => ag2, "ag3" => ag3, "ag4" => ag4, "ag5" => ag5, "ag6" => ag6,"ag7" => ag7,"ag8" => ag8,"ag9" => ag9, "working"=>working)
     #mydfs = Dict("all" => allag, "working"=>working, "kids"=>kids)
     #mydfs = Dict("all" => allag)
     
@@ -169,7 +170,7 @@ end
 function create_folder(ip::cv.ModelParameters,province="newyorkcity",calibrating = true)
     
     #RF = string("heatmap/results_prob_","$(replace(string(ip.β), "." => "_"))","_vac_","$(replace(string(ip.vaccine_ef), "." => "_"))","_herd_immu_","$(ip.herd)","_$strategy","cov_$(replace(string(ip.cov_val)))") ## 
-    main_folder = "/data/thomas-covid/ROI"
+    main_folder = "/data/thomas-covid/USomicron"
     #main_folder = "."
     if calibrating
         RF = string(main_folder,"/results_prob_","$(replace(string(ip.β), "." => "_"))","_$(ip.file_index)_$(province)") ##  
@@ -184,7 +185,7 @@ end
 
 
 
-function run_param_scen_cal(calibrating::Bool,b::Float64,province::String="usa",ic1::Int64=1,ic2::Int64=1,ic3::Int64=1,ic4::Int64=1,ic5::Int64=1,ic6::Int64=1,index::Int64 = 0,rc=[0.0],dc=[0],mt::Int64=500,vac::Bool=true,tbn::Int64 = 999,ro::Int64 = 1,nsims::Int64=500)
+function run_param_scen_cal(calibrating::Bool,b::Float64,province::String="usa",ic1::Int64=1,ic2::Int64=1,ic3::Int64=1,ic4::Int64=1,ic5::Int64=1,ic6::Int64=1,index::Int64 = 0,rc=[0.0],dc=[0],mt::Int64=500,vac::Bool=true,tbn::Int64 = 999,ro::Int64 = 1,dr::Int64=0,nsims::Int64=500)
     
     
     #b = bd[h_i]
@@ -194,7 +195,7 @@ function run_param_scen_cal(calibrating::Bool,b::Float64,province::String="usa",
     status_relax = 2, relax_after = 14,file_index = $index,
     modeltime=$mt, prov = Symbol($province),
     time_change_contact = $dc,
-    change_rate_values = $rc,time_back_to_normal = $tbn,relax_over = $ro)
+    change_rate_values = $rc,time_back_to_normal = $tbn,relax_over = $ro, reduce_days = $dr)
 
     folder = create_folder(ip,province,calibrating)
 
