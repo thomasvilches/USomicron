@@ -963,6 +963,7 @@ function get_breaks_vac()
 end
 
 
+
 function waning_factor()
     M = [1	1	1	1
             0.9985	0.9972	1	1

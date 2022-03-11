@@ -1456,6 +1456,7 @@ function move_to_infsimple(x::Human)
     _set_isolation(x, false, :null) 
 end
 
+
 function move_to_inf(x::Human)
     ## transfers human h to the severe infection stage for γ days
     ## for swap, check if person will be hospitalized, selfiso, die, or recover
@@ -1463,7 +1464,6 @@ function move_to_inf(x::Human)
     # h = prob of hospital, c = prob of icu AFTER hospital    
     comh = 0.98
     if x.strain == 1 || x.strain == 3 || x.strain == 5
-        comh = 0.65
         h = x.comorbidity == 1 ? comh : 0.04 #0.376
         c = x.comorbidity == 1 ? 0.396 : 0.25
 
@@ -1499,21 +1499,19 @@ function move_to_inf(x::Human)
         C. M aslo, et al., Characteristics and Outcomes of Hospitalized Patients in South Africa During the COVID-19 Omicron Wave Compared With Previous Waves. JAMA (2021) https:/doi.org/10.1001/jama.2021.24868.
         =#
         if x.strain == 4
-            h = 0.9*h
             if !x.recovered && x.vac_status < 2
-                h = h*2.8 #2.26 #https://www.thelancet.com/journals/laninf/article/PIIS1473-3099(21)00475-8/fulltext
+                h = h*2.65 #2.26 #https://www.thelancet.com/journals/laninf/article/PIIS1473-3099(21)00475-8/fulltext
             elseif x.recovered || x.boosted #for booster, it is an assumption
                 h = h/p.hosp_red #
             end
         elseif x.strain == 6
-            h = 0.85*h
-            h = h*(1-0.4*p.reduction_sev_omicron) # 0.7
+
+            h = h*(1-0.3*p.reduction_sev_omicron) # 0.7
             c = c*(1-0.381)#
             if x.recovered || x.boosted #for booster, it is an assumption
                 h = h/p.hosp_red
             end
         elseif x.strain == 2
-            h = 0.72*h
             if x.recovered || x.boosted #for booster, it is an assumption
                 h = h/p.hosp_red 
             end
@@ -1633,11 +1631,11 @@ function move_to_hospicu(x::Human)
         mc = 0.7*[0.0033, 0.0033, 0.0036, 0.0131, 0.022, 0.04, 0.2, 0.70]
         
         if x.strain == 4
-            mh = 0.55*mh
-            mc = 0.55*mc
+            mh = 0.75*mh
+            mc = 0.75*mc
         elseif x.strain == 6
-            mh = (1-0.77*p.reduction_sev_omicron)*mh
-            mc = (1-0.77*p.reduction_sev_omicron)*mc
+            mh = (1-0.9*p.reduction_sev_omicron)*mh
+            mc = (1-0.9*p.reduction_sev_omicron)*mc
         end
 
     else
