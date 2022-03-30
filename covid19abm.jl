@@ -1619,23 +1619,47 @@ function move_to_hospicu(x::Human)
     g = findfirst(y-> y >= x.age,age_thres) =#
     #https://www.medrxiv.org/content/10.1101/2021.08.24.21262415v1
     aux = [0:4, 5:19, 20:44, 45:54, 55:64, 65:74, 75:84, 85:99]
-   
+    f3 = f4 = f5 = 4
+    f2 = 6
+    f1 = 15
+    alphafactor = 0.9
     if x.strain == 1 || x.strain == 3 || x.strain == 5
 
-        mh = [0.001, 0.001, 0.0015, 0.0065, 0.01, 0.02, 0.0735, 0.38]
-        mc = [0.002,0.002,0.0022, 0.008, 0.022, 0.04, 0.08, 0.4]
+        mh = [0.001, 0.001, f1*0.0015, f2*0.0065, f3*0.01, f4*0.02, f5*0.0735, 0.38]
+        mc = [0.002,0.002, f1*0.0022, f2*0.008, f3*0.022, f4*0.04, f5*0.08, 0.4]
 
     elseif x.strain == 2  || x.strain == 4  || x.strain == 6
     
-        mh = 0.7*[0.0016, 0.0016, 0.0025, 0.0107, 0.02, 0.038, 0.15, 0.66]
-        mc = 0.7*[0.0033, 0.0033, 0.0036, 0.0131, 0.022, 0.04, 0.2, 0.70]
-        
-        if x.strain == 4
-            mh = 0.75*mh
-            mc = 0.75*mc
-        elseif x.strain == 6
-            mh = (1-0.9*p.reduction_sev_omicron)*mh
-            mc = (1-0.9*p.reduction_sev_omicron)*mc
+        ## https://www.nejm.org/doi/full/10.1056/NEJMoa2117128
+
+        if x.vac_status > 0
+
+            
+            mh = alphafactor*[0.0016, 0.0016, f1*0.0025, f2*0.0107, f3*0.02, f4*0.038, f5*0.15, 0.66]
+            mc = alphafactor*[0.0033, 0.0033, f1*0.0036, f2*0.0131, f3*0.022, f4*0.04, f5*0.2, 0.70]
+            
+            if x.strain == 4
+                mh = 0.32*mh
+                mc = 0.32*mc
+            elseif x.strain == 6
+                mh = (1-0.75*p.reduction_sev_omicron)*mh
+                mc = (1-0.75*p.reduction_sev_omicron)*mc
+            end
+
+        else
+
+            mh = alphafactor*[0.0016, 0.0016, f1*0.0025, f2*0.0107, f3*0.02, f4*0.038, f5*0.15, 0.66]
+            mc = alphafactor*[0.0033, 0.0033, f1*0.0036, f2*0.0131, f3*0.022, f4*0.04, f5*0.2, 0.70]
+            
+            if x.strain == 4
+
+                mh = 0.32*mh
+                mc = 0.32*mc
+            elseif x.strain == 6
+                mh = (1-0.75*p.reduction_sev_omicron)*mh
+                mc = (1-0.75*p.reduction_sev_omicron)*mc
+            end
+    
         end
 
     else
