@@ -64,10 +64,9 @@ end
     initialinf::Int64 = 20
     initialhi::Int64 = 20 ## initial herd immunity, inserts number of REC individuals
     τmild::Int64 = 0 ## days before they self-isolate for mild cases
-    fmild::Float64 = 0.0  ## percent of people practice self-isolation
-    fsevere::Float64 = 0.0 #
-    eldq::Float64 = 0.0 ## complete isolation of elderly
-    eldqag::Int8 = 5 ## default age group, if quarantined(isolated) is ag 5. 
+    τsevere::Int64 = 0 ## days before they self-isolate for mild cases
+    fmild::Float64 = 1.0  ## percent of people practice self-isolation
+    fsevere::Float64 = 1.0 #
     fpreiso::Float64 = 0.0 ## percent that is isolated at the presymptomatic stage
     tpreiso::Int64 = 0## preiso is only turned on at this time. 
     frelasymp::Float64 = 0.26 ## relative transmission of asymptomatic
@@ -115,9 +114,10 @@ end
     ## Beta - B.1.351
     ins_sixth_strain::Bool = true #insert third strain?
     initialinf6::Int64 = 1 #number of initial infected of sixth strain
-    time_sixth_strain::Int64 = 999 #when will the sixth strain introduced
-    rel_trans_sixth::Float64 = 1.0
+    time_sixth_strain::Int64 = 441 #when will the sixth strain introduced
+    rel_trans_sixth::Float64 = 1.35
     sixth_strain_trans::Float64 = rel_trans_sixth*sec_strain_trans*fourth_strain_trans #transmissibility of sixth strain
+    reduction_sev_omicron::Float64 = 0.752 ##reduction of severity compared to Delta
 
     mortality_inc::Float64 = 1.3 #The mortality increase when infected by strain 2
 
@@ -131,7 +131,9 @@ end
     reduction_omicron::Float64 = 0.0
     reduction_reduction::Float64 = 0.0
     #=------------ Vaccine Efficacy ----------------------------=#
-    
+    booster_after::Array{Int64,1} = [180;180;999]
+    booster_after_bkup::Array{Int64,1} = [150;150;999]
+    change_booster_eligibility::Int64 = 490
     #=------------ Vaccine Efficacy ----------------------------=#
     days_to_protection::Array{Array{Array{Int64,1},1},1} = [[[14],[0;7]],[[14],[0;14]],[[14]]]
     vac_efficacy_inf::Array{Array{Array{Array{Float64,1},1},1},1} = [[[[0.46],[0.6;0.861]],[[0.295],[0.6;0.895]],[[0.368],[0.48;0.736]],[[0.368],[0.48;0.64]],[[0.46],[0.6;0.861]],[[0.46],[0.6;0.861]]],
@@ -159,11 +161,12 @@ end
 
     relax_over::Int64 = 92
     relax_rate::Float64 = (1-contact_change_2)/relax_over
-    turnon::Int64 = 0
-    time_back_to_normal::Int64 = 999
+    turnon::Int64 = 1
+    time_back_to_normal::Int64 = 425
 
     day_inital_vac::Int64 = 104 ###this must match to the matrices in matrice code
     time_vac_kids::Int64 = 253
+    time_vac_kids2::Int64 = 428
     using_jj::Bool = false
 
     α::Float64 = 1.0
@@ -174,7 +177,7 @@ end
 
     #one waning rate for each efficacy? For each strain? I can change this structure based on that
 
-    waning::Int64 = 0
+    waning::Int64 = 1
     ### after calibration, how much do we want to increase the contact rate... in this case, to reach 70%
     ### 0.5*0.95 = 0.475, so we want to multiply this by 1.473684211
 end
@@ -204,7 +207,7 @@ export ModelParameters, HEALTH, Human, humans, BETAS
 
 function runsim(simnum, ip::ModelParameters)
     # function runs the `main` function, and collects the data as dataframes. 
-    hmatrix,hh1,hh2,hh3,hh4,remaining_doses,total_given = main(ip,simnum)            
+    hmatrix, remaining_doses, total_given, lat,hos, icu, ded,lat2, hos2, icu2, ded2,lat3, hos3, icu3, ded3, lat4, hos4, icu4, ded4, lat5, hos5, icu5, ded5, lat6, hos6, icu6, ded6, lat7, hos7, icu7, ded7, lat8, hos8, icu8, ded8  = main(ip,simnum)            
 
     ###use here to create the vector of comorbidity
     # get simulation age groups
@@ -271,18 +274,18 @@ function runsim(simnum, ip::ModelParameters)
     coverage22 = length(findall(x-> x.vac_status == 2,humans))/p.popsize
 
     #### let's count the number of vaccines for each vaccine thaat was given
-    aux =  findall(x-> x.vaccine_n == 2, humans)
+    aux =  findall(x-> x.vaccine_n == 2  && x.vac_status == 1, humans)
     n_moderna = length(aux)
-    aux =  findall(x-> x.vaccine_n == 1, humans)
+    aux =  findall(x-> x.vaccine_n == 1  && x.vac_status == 1, humans)
     n_pfizer = length(aux)
-    aux =  findall(x-> x.vaccine_n == 3, humans)
+    aux =  findall(x-> x.vaccine_n == 3  && x.vac_status == 1, humans)
     n_jensen = length(aux)
 
-    aux =  findall(x-> x.vaccine_n == 2 && x.age in range_work, humans)
+    aux =  findall(x-> x.vaccine_n == 2 && x.age in range_work  && x.vac_status == 1, humans)
     n_moderna_w = length(aux)
-    aux =  findall(x-> x.vaccine_n == 1 && x.age in range_work, humans)
+    aux =  findall(x-> x.vaccine_n == 1 && x.age in range_work  && x.vac_status == 1, humans)
     n_pfizer_w = length(aux)
-    aux =  findall(x-> x.vaccine_n == 3 && x.age in range_work, humans)
+    aux =  findall(x-> x.vaccine_n == 3 && x.age in range_work  && x.vac_status == 1, humans)
     n_jensen_w = length(aux)
 
     aux =  findall(x-> x.vaccine_n == 2 && x.vac_status == 2, humans)
@@ -299,9 +302,19 @@ function runsim(simnum, ip::ModelParameters)
     aux =  findall(x-> x.vaccine_n == 3 && x.age in range_work && x.vac_status == 2, humans)
     n_jensen_w_2 = length(aux)
 
-    aux = findall(x-> x.health == DED,humans)
+    aux =  findall(x-> x.vaccine_n == 2 && x.boosted, humans)
+    n_moderna_3 = length(aux)
+    aux =  findall(x-> x.vaccine_n == 1 && x.boosted, humans)
+    n_pfizer_3 = length(aux)
+    aux =  findall(x-> x.vaccine_n == 3 && x.boosted, humans)
+    n_jensen_3 = length(aux)
 
-    years_w_lost = sum(map(y-> max(0,range_work[end]-max(humans[y].age,range_work[1])),aux))
+    aux =  findall(x-> x.vaccine_n == 2 && x.age in range_work && x.boosted, humans)
+    n_moderna_w_3 = length(aux)
+    aux =  findall(x-> x.vaccine_n == 1 && x.age in range_work && x.boosted, humans)
+    n_pfizer_w_3 = length(aux)
+    aux =  findall(x-> x.vaccine_n == 3 && x.age in range_work && x.boosted, humans)
+    n_jensen_w_3 = length(aux)
 
     pos = findall(y-> y in (11,22,33,44,55,66),hmatrix[:,end])
 
@@ -311,15 +324,13 @@ function runsim(simnum, ip::ModelParameters)
         x = humans[i]
         vector_ded[(x.age+1)] += 1
     end
-
-    return (a=all, g1=ag1, g2=ag2, g3=ag3, g4=ag4, g5=ag5,g6=ag6,g7=ag7, work = work,
-    R01 = R01,
-    R02 = R02, cov1 = coverage1,cov2 = coverage2,cov12 = coverage12,cov22 = coverage22,
-    n_pfizer = n_pfizer, n_moderna = n_moderna, n_jensen = n_jensen, n_pfizer_w = n_pfizer_w, 
-    n_moderna_w = n_moderna_w, n_jensen_w = n_jensen_w,
-    vector_dead=vector_ded,
-    n_pfizer_2 = n_pfizer_2, n_moderna_2 = n_moderna_2, n_jensen_2 = n_jensen_2, 
-    n_pfizer_w_2 = n_pfizer_w_2, n_moderna_w_2 = n_moderna_w_2, n_jensen_w_2 = n_jensen_w_2,years_w_lost = years_w_lost, remaining = remaining_doses, total_given = total_given)
+    return (lat=lat, hos=hos, icu=icu, ded=ded, lat2=lat2, hos2=hos2, icu2=icu2, ded2=ded2, lat3=lat3, hos3=hos3, icu3=icu3, ded3=ded3, lat4=lat4, hos4=hos4, icu4=icu4, ded4=ded4, lat5=lat5, hos5=hos5, icu5=icu5, ded5=ded5, lat6=lat6, hos6=hos6, icu6=icu6, ded6=ded6, lat7=lat7, hos7=hos7, icu7=icu7, ded7=ded7, lat8=lat8, hos8=hos8, icu8=icu8, ded8=ded8,
+    a=all, g1=ag1, g2=ag2, g3=ag3, g4=ag4, g5=ag5,g6=ag6,g7=ag7,g8=ag8,g9=ag9, work = work,
+    cov1 = coverage1,cov2 = coverage2,cov12 = coverage12,cov22 = coverage22,vector_dead=vector_ded,
+    n_pfizer = n_pfizer, n_moderna = n_moderna, n_jensen = n_jensen, n_pfizer_w = n_pfizer_w, n_moderna_w = n_moderna_w, n_jensen_w = n_jensen_w,
+    n_pfizer_2 = n_pfizer_2, n_moderna_2 = n_moderna_2, n_jensen_2 = n_jensen_2, n_pfizer_w_2 = n_pfizer_w_2, n_moderna_w_2 = n_moderna_w_2, n_jensen_w_2 = n_jensen_w_2, 
+    n_pfizer_3 = n_pfizer_3, n_moderna_3 = n_moderna_3, n_jensen_3 = n_jensen_3, n_pfizer_w_3 = n_pfizer_w_3, n_moderna_w_3 = n_moderna_w_3, n_jensen_w_3 = n_jensen_w_3, 
+    remaining = remaining_doses, total_given = total_given)
 end
 export runsim
 
@@ -374,8 +385,49 @@ function main(ip::ModelParameters,sim::Int64)
     remaining_doses::Int64 = 0
     total_given::Int64 = 0
     count_relax::Int64 = 1
+    
+    #these vectors will record incidence by vaccination status
+    #one dose, two doses, boosted, unvac recovered, unvac non recovered
+    lat::Vector{Int64} = zeros(Int64,p.modeltime)
+    lat2::Vector{Int64} = zeros(Int64,p.modeltime)
+    lat3::Vector{Int64} = zeros(Int64,p.modeltime)
+    lat4::Vector{Int64} = zeros(Int64,p.modeltime)
+    lat5::Vector{Int64} = zeros(Int64,p.modeltime)
+    lat6::Vector{Int64} = zeros(Int64,p.modeltime)
+    lat7::Vector{Int64} = zeros(Int64,p.modeltime)
+    lat8::Vector{Int64} = zeros(Int64,p.modeltime)
+
+    hos::Vector{Int64} = zeros(Int64,p.modeltime)
+    hos2::Vector{Int64} = zeros(Int64,p.modeltime)
+    hos3::Vector{Int64} = zeros(Int64,p.modeltime)
+    hos4::Vector{Int64} = zeros(Int64,p.modeltime)
+    hos5::Vector{Int64} = zeros(Int64,p.modeltime)
+    hos6::Vector{Int64} = zeros(Int64,p.modeltime)
+    hos7::Vector{Int64} = zeros(Int64,p.modeltime)
+    hos8::Vector{Int64} = zeros(Int64,p.modeltime)
+
+    icu::Vector{Int64} = zeros(Int64,p.modeltime)
+    icu2::Vector{Int64} = zeros(Int64,p.modeltime)
+    icu3::Vector{Int64} = zeros(Int64,p.modeltime)
+    icu4::Vector{Int64} = zeros(Int64,p.modeltime)
+    icu5::Vector{Int64} = zeros(Int64,p.modeltime)
+    icu6::Vector{Int64} = zeros(Int64,p.modeltime)
+    icu7::Vector{Int64} = zeros(Int64,p.modeltime)
+    icu8::Vector{Int64} = zeros(Int64,p.modeltime)
+
+    ded::Vector{Int64} = zeros(Int64,p.modeltime)
+    ded2::Vector{Int64} = zeros(Int64,p.modeltime)
+    ded3::Vector{Int64} = zeros(Int64,p.modeltime)
+    ded4::Vector{Int64} = zeros(Int64,p.modeltime)
+    ded5::Vector{Int64} = zeros(Int64,p.modeltime)
+    ded6::Vector{Int64} = zeros(Int64,p.modeltime)
+    ded7::Vector{Int64} = zeros(Int64,p.modeltime)
+    ded8::Vector{Int64} = zeros(Int64,p.modeltime)
+    
+  
+
     if p.vaccinating
-        vac_ind = vac_selection(sim,5,agebraks_vac)
+        vac_ind::Vector{Vector{Int64}} = vac_selection(sim,16,agebraks_vac)
     else
         time_vac = 9999 #this guarantees that no one will be vaccinated
     end
@@ -409,7 +461,14 @@ function main(ip::ModelParameters,sim::Int64)
 
         # start of day
         #println("$st")
-
+        if p.vaccinating
+            if st == p.time_vac_kids
+                vac_ind = vac_selection(sim,12,agebraks_vac)
+            elseif st == p.time_vac_kids2
+                vac_ind = vac_selection(sim,5,agebraks_vac)
+            
+            end
+        end 
         if st == p.relaxing_time ### time that people vaccinated people is allowed to go back to normal
             setfield!(p, :relaxed, true)
         end
@@ -457,22 +516,13 @@ function main(ip::ModelParameters,sim::Int64)
        
         _get_model_state(st, hmatrix) ## this datacollection needs to be at the start of the for loop
         dyntrans(st, grps,sim)
-        if st in p.days_Rt ### saves individuals that became latent on days_Rt
-            aux1 = findall(x->x.swap == LAT,humans)
-            h_init1 = vcat(h_init1,[aux1])
-            aux2 = findall(x->x.swap == LAT2,humans)
-            h_init2 = vcat(h_init2,[aux2])
-            aux3 = findall(x->x.swap == LAT3,humans)
-            h_init3 = vcat(h_init3,[aux3])
-            aux4 = findall(x->x.swap == LAT4,humans)
-            h_init4 = vcat(h_init4,[aux4])
-        end
-        sw = time_update() ###update the system
+       
+        lat[st],hos[st], icu[st], ded[st],lat2[st], hos2[st], icu2[st], ded2[st],lat3[st], hos3[st], icu3[st], ded3[st], lat4[st], hos4[st], icu4[st], ded4[st], lat5[st], hos5[st], icu5[st], ded5[st], lat6[st], hos6[st], icu6[st], ded6[st], lat7[st], hos7[st], icu7[st], ded7[st], lat8[st], hos8[st], icu8[st], ded8[st] = time_update() ###update the system
         # end of day
     end
     
     
-    return hmatrix,h_init1,h_init2,h_init3, h_init4, remaining_doses, total_given ## return the model state as well as the age groups. 
+    return hmatrix, remaining_doses, total_given, lat,hos, icu, ded,lat2, hos2, icu2, ded2,lat3, hos3, icu3, ded3, lat4, hos4, icu4, ded4, lat5, hos5, icu5, ded5, lat6, hos6, icu6, ded6, lat7, hos7, icu7, ded7, lat8, hos8, icu8, ded8 ## return the model state as well as the age groups. 
 end
 export main
 
@@ -785,14 +835,17 @@ function _get_column_incidence(hmatrix, hcol)
     inth = Int(hcol)
     timevec = zeros(Int64, p.modeltime)
     for r in eachrow(hmatrix)
-        idx = findfirst(x -> x == inth, r)
-        if idx !== nothing 
-            timevec[idx] += 1
+        idx = findall(x-> r[x] == inth && r[x] != r[x-1],2:length(r))
+        idx = idx .+ 1
+        #idx = findfirst(x -> x == inth, r)
+        if idx !== nothing
+            for i in idx 
+                timevec[i] += 1
+            end
         end
     end
     return timevec
 end
-
 function herd_immu_dist_4(sim::Int64,strain::Int64)
     rng = MersenneTwister(200*sim)
     vec_n = zeros(Int32,6)
@@ -865,56 +918,6 @@ export _collectdf, _get_incidence_and_prev, _get_column_incidence, _get_column_p
 ## initialization functions 
 function get_province_ag(prov) 
     ret = @match prov begin
-        :southdakota => Distributions.Categorical(@SVector [0.069141895351768,0.202790001571227,0.369067629448183,0.187328676925233,0.171671796703589])
-        :northdakota => Distributions.Categorical(@SVector [0.070992911337923,0.192472528481935,0.404238762725343,0.175031690334907,0.157264107119893])
-        :nebraska => Distributions.Categorical(@SVector [0.067658942684274,0.206234155359159,0.383957262376913,0.180623219093387,0.161526420486268])
-        :kansas => Distributions.Categorical(@SVector [0.063615181885646,0.204838887946854,0.384556556553808,0.183777649783031,0.163211723830662])
-        :iowa => Distributions.Categorical(@SVector [0.062006865140869,0.196730658907726,0.375836986184142,0.190166620708891,0.175258869058373])
-        :indiana => Distributions.Categorical(@SVector [0.062139986830494,0.198557117645757,0.387121096327971,0.190906148477939,0.161275650717839])
-        :washington => Distributions.Categorical(@SVector [0.059945162722575,0.18172678197842,0.413535948568155,0.18592933610492,0.15886277062593])
-        :alaska => Distributions.Categorical(@SVector [0.069824822806526,0.199265937160393,0.419576376026082,0.186134824241844,0.125198039765155])
-        :wyoming => Distributions.Categorical(@SVector [0.060355000958948,0.195661752128261,0.382288655554384,0.190329653620937,0.171364937737469])
-        :utah => Distributions.Categorical(@SVector [0.077294524756719,0.243549042127189,0.423226068463779,0.141807846515768,0.114122518136545])
-        :montana => Distributions.Categorical(@SVector [0.057220489194201,0.180823332815608,0.372861342580031,0.195942468875669,0.193152366534491])
-        :newmexico => Distributions.Categorical(@SVector [0.057699507208266,0.195879587701238,0.379771550279017,0.186565046553629,0.18008430825785])
-        :districtofcolumbia => Distributions.Categorical(@SVector [0.064283477553635,0.147317247349979,0.514870017527478,0.14976996070841,0.123759296860499])
-        :idaho => Distributions.Categorical(@SVector [0.065022816741417,0.212624051167697,0.382128238200625,0.177572723991573,0.162652169898689])
-        :delaware => Distributions.Categorical(@SVector [0.056193287079826,0.178886259915133,0.365612201724442,0.205312580871751,0.193995670408846])
-        :rhodeisland => Distributions.Categorical(@SVector [0.051465930877199,0.173710378237447,0.389835948274479,0.208422813375233,0.176564929235643])
-        :newjersey => Distributions.Categorical(@SVector [0.057946294776401,0.184278539414266,0.384542550879907,0.207109733072587,0.166122881856839])
-        :wisconsin => Distributions.Categorical(@SVector [0.056762515470334,0.187481558399803,0.375762610619545,0.205282361294263,0.174710954216055])
-        :newhampshire => Distributions.Categorical(@SVector [0.046790089952939,0.167253923811751,0.370258827059574,0.228992778612514,0.186704380563223])
-        :colorado => Distributions.Categorical(@SVector [0.05768644369181,0.186806618674654,0.42620898058185,0.183013772466736,0.146284184584951])
-        :california => Distributions.Categorical(@SVector [0.060328572249656,0.190869569651902,0.41753535355376,0.183511846448123,0.147754658096559])
-        :michigan => Distributions.Categorical(@SVector [0.056718745447141,0.184367113697533,0.37770471730996,0.204436991537978,0.176772432007387])
-        :maine => Distributions.Categorical(@SVector [0.047267097749462,0.161894849919507,0.353223301086436,0.225397481944812,0.212217269299783])
-        :connecticut => Distributions.Categorical(@SVector [0.05096644393565,0.181716647215217,0.376013207351891,0.214531396771144,0.176772304726099])
-        :oregon => Distributions.Categorical(@SVector [0.054012613873269,0.174896870051404,0.402817435036846,0.186640134271056,0.181632946767425])
-        :minnesota => Distributions.Categorical(@SVector [0.06234839436332,0.193935348973124,0.385302622582466,0.195214687766861,0.163198946314228])
-        :virginia => Distributions.Categorical(@SVector [0.059220417645371,0.185337177504965,0.400913172356596,0.195323213503479,0.159206018989589])
-        :pennsylvania => Distributions.Categorical(@SVector [0.054516841093989,0.178067486232022,0.37460593037535,0.205857386692021,0.186952355606617])
-        :illinois => Distributions.Categorical(@SVector [0.058944487931135,0.189268377449461,0.396559894588157,0.193985063393809,0.161242176637438])
-        :ohio => Distributions.Categorical(@SVector [0.059100187354031,0.187871179132696,0.377904372449547,0.200062023594631,0.175062237469095])
-        :arizona => Distributions.Categorical(@SVector [0.059047219448153,0.19355196801854,0.389072002662008,0.178539844315969,0.179788965555331])
-        :kentucky => Distributions.Categorical(@SVector [0.061018342210811,0.189432843451166,0.384296702108682,0.197253245705315,0.167998866524027])
-        :tennessee => Distributions.Categorical(@SVector [0.059832272541306,0.185814711998845,0.392468254579544,0.194457045610494,0.167427715269812])
-        :southcarolina => Distributions.Categorical(@SVector [0.056803310496563,0.18555604370334,0.379181286822302,0.196467700478217,0.181991658499579])
-        :northcarolina => Distributions.Categorical(@SVector [0.05813931314814,0.189039961922502,0.391583438881687,0.194276952778029,0.166960333269642])
-        :nevada => Distributions.Categorical(@SVector [0.060248571825583,0.186580484884532,0.404644764745682,0.187504464059613,0.161021714484591])
-        :westvirginia => Distributions.Categorical(@SVector [0.05190701432416,0.172668871470923,0.364284291411363,0.206351376310091,0.204788446483464])
-        :oklahoma => Distributions.Categorical(@SVector [0.064577930947687,0.202923397720125,0.390831269675719,0.181157759306298,0.160509642350171])
-        :maryland => Distributions.Categorical(@SVector [0.059867045559805,0.186543780021437,0.391742698918897,0.203155310899684,0.158691164600177])
-        :massachusetts => Distributions.Categorical(@SVector [0.051847928103912,0.174228288330088,0.400024925632967,0.204246120748877,0.169652737184155])
-        :newyork => Distributions.Categorical(@SVector [0.057932889510563,0.174466515410726,0.399115102885276,0.199048852803865,0.16943663938957])
-        :texas => Distributions.Categorical(@SVector [0.068661166046309,0.214502673672857,0.416443080311993,0.171608270843711,0.128784809125131])
-        :alabama => Distributions.Categorical(@SVector [0.06003383515001,0.188057558505339,0.381706584597563,0.196878559548538,0.173323462198551])
-        :louisiana => Distributions.Categorical(@SVector [0.064848861876865,0.193984934587336,0.391711484742064,0.190053807503624,0.159400911290111])
-        :vermont => Distributions.Categorical(@SVector [0.04654408971953,0.1688683614615,0.366096197208605,0.218104806334727,0.200386545275638])
-        :missouri => Distributions.Categorical(@SVector [0.059973004978633,0.188875698419599,0.382552593692341,0.195556021186725,0.173042681722702])
-        :georgia => Distributions.Categorical(@SVector [0.061838545944718,0.202038008658033,0.40539884301492,0.18785057353371,0.14287402884862])
-        :florida => Distributions.Categorical(@SVector [0.053066205252444,0.166443652792657,0.372408508401048,0.198686342048047,0.209395291505804])
-        :mississippi => Distributions.Categorical(@SVector [0.061649467146974,0.200597819531213,0.384003287469814,0.190218298882213,0.163531126969785])
-        :arkansas => Distributions.Categorical(@SVector [0.062450709191187,0.195660155530313,0.380966424592187,0.187325618231005,0.173597092455309])
         :usa => Distributions.Categorical(@SVector [0.059444636404977,0.188450296592341,0.396101793107413,0.189694011721906,0.166309262173363])
         :newyorkcity   => Distributions.Categorical(@SVector [0.064000, 0.163000, 0.448000, 0.181000, 0.144000])
         _ => error("shame for not knowing your canadian provinces and territories")
@@ -1027,17 +1030,19 @@ export insert_infected
 function time_update()
     # counters to calculate incidence
 
-    lat_v = zeros(Int64,p.nstrains)
-    pre_v = zeros(Int64,p.nstrains)
-    asymp_v = zeros(Int64,p.nstrains)
-    mild_v = zeros(Int64,p.nstrains)
-    miso_v = zeros(Int64,p.nstrains)
-    inf_v = zeros(Int64,p.nstrains)
-    infiso_v = zeros(Int64,p.nstrains)
-    hos_v = zeros(Int64,p.nstrains)
-    icu_v = zeros(Int64,p.nstrains)
-    rec_v = zeros(Int64,p.nstrains)
-    ded_v = zeros(Int64,p.nstrains)
+    lat_v = zeros(Int64,8)
+    pre_v = zeros(Int64,8)
+    asymp_v = zeros(Int64,8)
+    mild_v = zeros(Int64,8)
+    miso_v = zeros(Int64,8)
+    inf_v = zeros(Int64,8)
+    infiso_v = zeros(Int64,8)
+    hos_v = zeros(Int64,8)
+    icu_v = zeros(Int64,8)
+    rec_v = zeros(Int64,8)
+    ded_v = zeros(Int64,8)
+
+    
     
     for x in humans 
         x.tis += 1 
@@ -1045,19 +1050,39 @@ function time_update()
         if x.recovered 
             x.days_recovered += 1
         end
-        if x.tis >= x.exp             
+        
+        if x.tis >= x.exp    
+            
+            if x.vac_status == 1
+                ind_vac = !x.recovered ? 1 : 6
+            elseif x.vac_status == 2
+                if x.boosted
+                    ind_vac  = !x.recovered ? 3 : 8
+                else
+                    ind_vac = !x.recovered ? 2 : 7
+                end
+            else
+                if x.recovered
+                    ind_vac = 4
+                else
+                    ind_vac = 5
+                end
+            end         
             @match Symbol(x.swap_status) begin
-                :LAT  => begin move_to_latent(x); lat_v[x.strain] += 1; end
-                :PRE  => begin move_to_pre(x); pre_v[x.strain] += 1; end
-                :ASYMP => begin move_to_asymp(x); asymp_v[x.strain] += 1; end
-                :MILD => begin move_to_mild(x); mild_v[x.strain] += 1; end
-                :MISO => begin move_to_miso(x); miso_v[x.strain] += 1; end
-                :INF  => begin move_to_inf(x); inf_v[x.strain] +=1; end    
-                :IISO => begin move_to_iiso(x); infiso_v[x.strain] += 1; end
-                :HOS  => begin move_to_hospicu(x); hos_v[x.strain] += 1; end 
-                :ICU  => begin move_to_hospicu(x); icu_v[x.strain] += 1; end
-                :REC  => begin move_to_recovered(x); rec_v[x.strain] += 1; end
-                :DED  => begin move_to_dead(x); ded_v[x.strain] += 1; end
+                :LAT  => begin 
+                    move_to_latent(x); 
+                    lat_v[ind_vac] += 1; 
+                end
+                :PRE  => begin move_to_pre(x); pre_v[ind_vac] += 1; end
+                :ASYMP => begin move_to_asymp(x); asymp_v[ind_vac] += 1; end
+                :MILD => begin move_to_mild(x); mild_v[ind_vac] += 1; end
+                :MISO => begin move_to_miso(x); miso_v[ind_vac] += 1; end
+                :INF  => begin move_to_inf(x); inf_v[ind_vac] +=1; end    
+                :IISO => begin move_to_iiso(x); infiso_v[ind_vac] += 1; end
+                :HOS  => begin move_to_hospicu(x); hos_v[ind_vac] += 1; end 
+                :ICU  => begin move_to_hospicu(x); icu_v[ind_vac] += 1; end
+                :REC  => begin move_to_recovered(x); rec_v[ind_vac] += 1; end
+                :DED  => begin move_to_dead(x); ded_v[ind_vac] += 1; end
                 _    => begin dump(x); error("swap expired, but no swap set."); end
             end
         end
@@ -1071,18 +1096,21 @@ function time_update()
        
     end
 
-
-    (lat,lat2,lat3,lat4,lat5,lat6) = lat_v
-    (mild,mild2,mild3,mild4,mild5,mild6) = mild_v
-    (miso,miso2,miso3,miso4,miso5,miso6) = miso_v
-    (inf,inf2,inf3,inf4,inf5,inf6) = inf_v
-    (infiso,infiso2,infiso3,infiso4,infiso5,infiso6) = infiso_v
-    (hos,hos2,hos3,hos4,hos5,hos6) = hos_v
-    (icu,icu2,icu3,icu4,icu5,icu6) = icu_v
-    (rec,rec2,rec3,rec4,rec5,rec6) = rec_v
-    (ded,ded2,ded3,ded4,ded5,ded6) = ded_v
-
-    return (lat, mild, miso, inf, infiso, hos, icu, rec, ded,lat2, mild2, miso2, inf2, infiso2, hos2, icu2, rec2, ded2,lat3, mild3, miso3, inf3, infiso3, hos3, icu3, rec3, ded3, lat4, mild4, miso4, inf4, infiso4, hos4, icu4, rec4, ded4, lat5, mild5, miso5, inf5, infiso5, hos5, icu5, rec5, ded5, lat6, mild6, miso6, inf6, infiso6, hos6, icu6, rec6, ded6)
+     
+        (lat,lat2,lat3,lat4,lat5,lat6,lat7,lat8) = lat_v
+        #(mild,mild2,mild3,mild4,mild5) = mild_v
+        #(miso,miso2,miso3,miso4,miso5) = miso_v
+        #(inf,inf2,inf3,inf4,inf5) = inf_v
+        #(infiso,infiso2,infiso3,infiso4,infiso5) = infiso_v
+        (hos,hos2,hos3,hos4,hos5,hos6,hos7,hos8) = hos_v
+        (icu,icu2,icu3,icu4,icu5,icu6,icu7,icu8) = icu_v
+        #(rec,rec2,rec3,rec4,rec5) = rec_v
+        (ded,ded2,ded3,ded4,ded5,ded6,ded7,ded8) = ded_v
+    
+    #return (lat, mild, miso, inf, infiso, hos, icu, rec, ded,lat2, mild2, miso2, inf2, infiso2, hos2, icu2, rec2, ded2,lat3, mild3, miso3, inf3, infiso3, hos3, icu3, rec3, ded3, lat4, mild4, miso4, inf4, infiso4, hos4, icu4, rec4, ded4, lat5, mild5, miso5, inf5, infiso5, hos5, icu5, rec5, ded5, lat6, mild6, miso6, inf6, infiso6, hos6, icu6, rec6, ded6)
+    #this is related to vaccination status, not to strain anymore
+    return lat, hos, icu, ded,lat2, hos2, icu2, ded2,lat3, hos3, icu3, ded3, lat4, hos4, icu4, ded4, lat5, hos5, icu5, ded5, lat6, hos6, icu6, ded6, lat7, hos7, icu7, ded7, lat8, hos8, icu8, ded8
+    
 end
 export time_update
 
@@ -1192,9 +1220,9 @@ end
 export move_to_asymp
 
 function move_to_pre(x::Human)
-    if x.strain == 1 || x.strain == 3 || x.strain == 5 || x.strain == 6
+    if x.strain == 1 || x.strain == 3 || x.strain == 5
         θ = (0.95, 0.9, 0.85, 0.6, 0.2)  # percentage of sick individuals going to mild infection stage
-    elseif x.strain == 2 || x.strain == 4
+    elseif x.strain == 2 || x.strain == 4 || x.strain == 6
         θ = (0.89, 0.78, 0.67, 0.48, 0.04)
             if x.strain == 4
                 θ = map(y-> max(0,1-(1-y)*1.88),θ)
@@ -1294,11 +1322,11 @@ function move_to_inf(x::Human)
  
     # h = prob of hospital, c = prob of icu AFTER hospital    
     comh = 0.98
-    if x.strain == 1 || x.strain == 3 || x.strain == 5 || x.strain == 6
+    if x.strain == 1 || x.strain == 3 || x.strain == 5
         h = x.comorbidity == 1 ? comh : 0.04 #0.376
         c = x.comorbidity == 1 ? 0.396 : 0.25
 
-    elseif x.strain == 2 || x.strain == 4
+    elseif x.strain == 2 || x.strain == 4 || x.strain == 6
         if x.age <  20
             h = x.comorbidity == 1 ? comh : 0.05*1.07*1 #0.376
             c = x.comorbidity == 1 ? 0.396*1.07 : 0.25*1.07
@@ -1326,6 +1354,10 @@ function move_to_inf(x::Human)
         end
         if x.strain == 4
             h = h*2.26
+        elseif x.strain == 6
+
+            h = h*(1-0.3*p.reduction_sev_omicron) # 0.7
+            c = c*(1-0.381)#
         end
     else
         error("no strain in movetoinf")
@@ -1429,12 +1461,12 @@ function move_to_hospicu(x::Human)
     g = findfirst(y-> y >= x.age,age_thres) =#
     aux = [0:4, 5:19, 20:44, 45:54, 55:64, 65:74, 75:84, 85:99]
    
-    if x.strain == 1 || x.strain == 3 || x.strain == 5 || x.strain == 6
+    if x.strain == 1 || x.strain == 3 || x.strain == 5
 
         mh = [0.001, 0.001, 0.0015, 0.0065, 0.01, 0.02, 0.0735, 0.38]
         mc = [0.002,0.002,0.0022, 0.008, 0.022, 0.04, 0.08, 0.4]
 
-    elseif x.strain == 2  || x.strain == 4
+    elseif x.strain == 2  || x.strain == 4 || x.strain == 6
     
         mh = 0.5*[0.0016, 0.0016, 0.0025, 0.0107, 0.02, 0.038, 0.15, 0.66]
         mc = 0.5*[0.0033, 0.0033, 0.0036, 0.0131, 0.022, 0.04, 0.2, 0.70]
@@ -1664,7 +1696,8 @@ function dyntrans(sys_time, grps,sim)
                     adj_beta = 0 # adjusted beta value by strain and vaccine efficacy
                     if y.health == SUS && y.swap == UNDEF
                         if y.vac_status*y.protected > 0
-
+                            aux_r = 1.0
+#= 
                             if x.strain == 6
                                 if y.boosted
                                     aux_r = (1-p.reduction_omicron*(1-p.reduction_reduction))
@@ -1674,7 +1707,7 @@ function dyntrans(sys_time, grps,sim)
                             else
                                 aux_r = 1.0
                             end
-
+ =#
                             aux = aux_r*y.vac_eff_inf[x.strain][y.vac_status][y.protected]
                         else
                             aux = 0.0
@@ -1684,7 +1717,7 @@ function dyntrans(sys_time, grps,sim)
 
                     elseif y.health_status == REC && y.swap == UNDEF
                         index = Int(floor(y.days_recovered/7))
-                        aux_red = x.strain == 6 ? p.reduction_omicron : 0.0
+                        aux_red = 0.0#x.strain == 6 ? p.reduction_omicron : 0.0
 
                         if y.vac_status*y.protected > 0
 
@@ -1704,7 +1737,7 @@ function dyntrans(sys_time, grps,sim)
                                 aux = aux_vac
                             end
 
-                            aux = aux*(1-aux_red*(1-p.reduction_reduction))
+                            aux = aux#*(1-aux_red*(1-p.reduction_reduction))
                         else
                             
                             if index > 0
