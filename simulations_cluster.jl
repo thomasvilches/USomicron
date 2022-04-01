@@ -18,7 +18,7 @@ using DelimitedFiles
 
 #@everywhere using covid19abm
 
-addprocs(SlurmManager(512), N=16, topology=:master_worker, exeflags = "--project=.")
+addprocs(SlurmManager(250), N=8, topology=:master_worker, exeflags = "--project=.")
 @everywhere using Parameters, Distributions, StatsBase, StaticArrays, Random, Match, DataFrames
 @everywhere include("covid19abm.jl")
 @everywhere const cv=covid19abm
@@ -42,16 +42,17 @@ function run(myp::cv.ModelParameters, nsims=1000, folderprefix="./")
     ## stack the sims together
     allag = vcat([cdr[i].a  for i = 1:nsims]...)
     working = vcat([cdr[i].work for i = 1:nsims]...)
-   
     ag1 = vcat([cdr[i].g1 for i = 1:nsims]...)
     ag2 = vcat([cdr[i].g2 for i = 1:nsims]...)
     ag3 = vcat([cdr[i].g3 for i = 1:nsims]...)
     ag4 = vcat([cdr[i].g4 for i = 1:nsims]...)
     ag5 = vcat([cdr[i].g5 for i = 1:nsims]...)
     ag6 = vcat([cdr[i].g6 for i = 1:nsims]...)
-    ag7 = vcat([cdr[i].g7 for i = 1:nsims]...) 
+    ag7 = vcat([cdr[i].g7 for i = 1:nsims]...)
+    ag8 = vcat([cdr[i].g8 for i = 1:nsims]...) 
+    ag9 = vcat([cdr[i].g9 for i = 1:nsims]...)  
 
-    mydfs = Dict("all" => allag, "ag1" => ag1, "ag2" => ag2, "ag3" => ag3, "ag4" => ag4, "ag5" => ag5, "ag6" => ag6,"ag7" => ag7, "working"=>working)
+    mydfs = Dict("all" => allag, "ag1" => ag1, "ag2" => ag2, "ag3" => ag3, "ag4" => ag4, "ag5" => ag5, "ag6" => ag6,"ag7" => ag7,"ag8" => ag8,"ag9" => ag9, "working"=>working)
     #mydfs = Dict("all" => allag, "working"=>working, "kids"=>kids)
     #mydfs = Dict("all" => allag)
     
@@ -60,15 +61,16 @@ function run(myp::cv.ModelParameters, nsims=1000, folderprefix="./")
     #c1 = Symbol.((:LAT, :ASYMP, :INF, :PRE, :MILD,:IISO, :HOS, :ICU, :DED), :_INC)
     #c2 = Symbol.((:LAT, :ASYMP, :INF, :PRE, :MILD,:IISO, :HOS, :ICU, :DED), :_PREV)
     
-    c1 = Symbol.((:LAT, :HOS, :ICU, :DED,:LAT2, :HOS2, :ICU2, :DED2,:LAT3, :HOS3, :ICU3, :DED3,:LAT4, :HOS4, :ICU4, :DED4,:LAT5, :HOS5, :ICU5, :DED5,:LAT6, :HOS6, :ICU6, :DED6), :_INC)
-    c2 = Symbol.((:LAT, :HOS, :ICU, :DED,:LAT2, :HOS2, :ICU2, :DED2,:LAT3, :HOS3, :ICU3, :DED3,:LAT4, :HOS4, :ICU4, :DED4,:LAT5, :HOS5, :ICU5, :DED5,:LAT6, :HOS6, :ICU6, :DED6), :_PREV)
+    c1 = Symbol.((:LAT, :ASYMP, :PRE, :MILD, :INF, :HOS, :ICU, :DED,:LAT2, :ASYMP2,:PRE2, :MILD2, :INF2, :HOS2, :ICU2, :DED2,:LAT3, :ASYMP3, :PRE3, :MILD3, :INF3, :HOS3, :ICU3, :DED3,:LAT4, :PRE4, :ASYMP4, :MILD4, :INF4, :HOS4, :ICU4, :DED4,:LAT5, :ASYMP5, :PRE5, :MILD5, :INF5, :HOS5, :ICU5, :DED5,:LAT6, :PRE6, :ASYMP6, :MILD6, :INF6, :HOS6, :ICU6, :DED6), :_INC)
+    #c2 = Symbol.((:LAT, :MILD, :INF, :HOS, :ICU, :DED,:LAT2, :MILD2, :INF2, :HOS2, :ICU2, :DED2,:LAT3, :MILD3, :INF3, :HOS3, :ICU3, :DED3,:LAT4, :MILD4, :INF4, :HOS4, :ICU4, :DED4,:LAT5, :MILD5, :INF5, :HOS5, :ICU5, :DED5,:LAT6, :MILD6, :INF6, :HOS6, :ICU6, :DED6), :_PREV)
+    #c2 = Symbol.((:HOS, :ICU,:HOS2, :ICU2, :HOS3, :ICU3, :HOS4, :ICU4, :HOS5, :ICU5, :HOS6, :ICU6), :_PREV)
     
     #c2 = Symbol.((:LAT, :HOS, :ICU, :DED,:LAT2, :HOS2, :ICU2, :DED2), :_PREV)
     for (k, df) in mydfs
         println("saving dataframe sim level: $k")
         # simulation level, save file per health status, per age group
-        for c in vcat(c1..., c2...)
-        #for c in vcat(c1...)
+        #for c in vcat(c1..., c2...)
+        for c in vcat(c1...)
         #for c in vcat(c2...)
             udf = unstack(df, :time, :sim, c) 
             fn = string("$(folderprefix)/simlevel_", lowercase(string(c)), "_", k, ".dat")
@@ -81,12 +83,6 @@ function run(myp::cv.ModelParameters, nsims=1000, folderprefix="./")
         #CSV.write(fn, yaf)       
     end
     
-   
-    R01 = [cdr[i].R01 for i=1:nsims]
-    R02 = [cdr[i].R02 for i=1:nsims]
-    writedlm(string(folderprefix,"/R01.dat"),R01)
-    writedlm(string(folderprefix,"/R02.dat"),R02)
-
     cov1 = [cdr[i].cov1 for i=1:nsims]
     cov2 = [cdr[i].cov2 for i=1:nsims]
     cov12 = [cdr[i].cov12 for i=1:nsims]
@@ -112,19 +108,64 @@ function run(myp::cv.ModelParameters, nsims=1000, folderprefix="./")
     vac_j_2 = [cdr[i].n_jensen_2 for i=1:nsims]
     vac_j_w_2 = [cdr[i].n_jensen_w_2 for i=1:nsims]
 
+    vac_m_3 = [cdr[i].n_moderna_3 for i=1:nsims]
+    vac_m_w_3 = [cdr[i].n_moderna_w_3 for i=1:nsims]
+
+    vac_p_3 = [cdr[i].n_pfizer_3 for i=1:nsims]
+    vac_p_w_3 = [cdr[i].n_pfizer_w_3 for i=1:nsims]
+
+    vac_j_3 = [cdr[i].n_jensen_3 for i=1:nsims]
+    vac_j_w_3 = [cdr[i].n_jensen_w_3 for i=1:nsims]
+
     remaining = [cdr[i].remaining for i=1:nsims]
     total = [cdr[i].total_given for i=1:nsims]
 
-    writedlm(string(folderprefix,"/vaccine_all.dat"),[vac_p vac_m vac_j vac_p_2 vac_m_2 vac_j_2 remaining total])
-    writedlm(string(folderprefix,"/vaccine_working.dat"),[vac_p_w vac_m_w vac_j_w vac_p_w_2 vac_m_w_2 vac_j_w_2])
 
-    writedlm(string(folderprefix,"/year_of_work.dat"),[cdr[i].years_w_lost for i=1:nsims])
+
+    writedlm(string(folderprefix,"/vaccine_all.dat"),[vac_p vac_m vac_j vac_p_2 vac_m_2 vac_j_2 vac_p_3 vac_m_3 vac_j_3 remaining total])
+    writedlm(string(folderprefix,"/vaccine_working.dat"),[vac_p_w vac_m_w vac_j_w vac_p_w_2 vac_m_w_2 vac_j_w_2 vac_p_w_3 vac_m_w_3 vac_j_w_3])
 
     writedlm(string(folderprefix,"/year_of_death.dat"),hcat([cdr[i].vector_dead for i=1:nsims]...))
-    
+
+    writedlm(string(folderprefix,"/lat_vac_1.dat"),hcat([cdr[i].lat for i=1:nsims]...))
+    writedlm(string(folderprefix,"/lat_vac_2.dat"),hcat([cdr[i].lat2 for i=1:nsims]...))
+    writedlm(string(folderprefix,"/lat_vac_3.dat"),hcat([cdr[i].lat3 for i=1:nsims]...))
+    writedlm(string(folderprefix,"/lat_unvac_r.dat"),hcat([cdr[i].lat4 for i=1:nsims]...))
+    writedlm(string(folderprefix,"/lat_unvac_nr.dat"),hcat([cdr[i].lat5 for i=1:nsims]...))
+    writedlm(string(folderprefix,"/lat_vac_1_r.dat"),hcat([cdr[i].lat6 for i=1:nsims]...))
+    writedlm(string(folderprefix,"/lat_vac_2_r.dat"),hcat([cdr[i].lat7 for i=1:nsims]...))
+    writedlm(string(folderprefix,"/lat_vac_3_r.dat"),hcat([cdr[i].lat8 for i=1:nsims]...))
+
+    writedlm(string(folderprefix,"/hos_vac_1.dat"),hcat([cdr[i].hos for i=1:nsims]...))
+    writedlm(string(folderprefix,"/hos_vac_2.dat"),hcat([cdr[i].hos2 for i=1:nsims]...))
+    writedlm(string(folderprefix,"/hos_vac_3.dat"),hcat([cdr[i].hos3 for i=1:nsims]...))
+    writedlm(string(folderprefix,"/hos_unvac_r.dat"),hcat([cdr[i].hos4 for i=1:nsims]...))
+    writedlm(string(folderprefix,"/hos_unvac_nr.dat"),hcat([cdr[i].hos5 for i=1:nsims]...))
+    writedlm(string(folderprefix,"/hos_vac_1_r.dat"),hcat([cdr[i].hos6 for i=1:nsims]...))
+    writedlm(string(folderprefix,"/hos_vac_2_r.dat"),hcat([cdr[i].hos7 for i=1:nsims]...))
+    writedlm(string(folderprefix,"/hos_vac_3_r.dat"),hcat([cdr[i].hos8 for i=1:nsims]...))
+
+    writedlm(string(folderprefix,"/icu_vac_1.dat"),hcat([cdr[i].icu for i=1:nsims]...))
+    writedlm(string(folderprefix,"/icu_vac_2.dat"),hcat([cdr[i].icu2 for i=1:nsims]...))
+    writedlm(string(folderprefix,"/icu_vac_3.dat"),hcat([cdr[i].icu3 for i=1:nsims]...))
+    writedlm(string(folderprefix,"/icu_unvac_r.dat"),hcat([cdr[i].icu4 for i=1:nsims]...))
+    writedlm(string(folderprefix,"/icu_unvac_nr.dat"),hcat([cdr[i].icu5 for i=1:nsims]...))
+    writedlm(string(folderprefix,"/icu_vac_1_r.dat"),hcat([cdr[i].icu6 for i=1:nsims]...))
+    writedlm(string(folderprefix,"/icu_vac_2_r.dat"),hcat([cdr[i].icu7 for i=1:nsims]...))
+    writedlm(string(folderprefix,"/icu_vac_3_r.dat"),hcat([cdr[i].icu8 for i=1:nsims]...))
+
+    writedlm(string(folderprefix,"/ded_vac_1.dat"),hcat([cdr[i].ded for i=1:nsims]...))
+    writedlm(string(folderprefix,"/ded_vac_2.dat"),hcat([cdr[i].ded2 for i=1:nsims]...))
+    writedlm(string(folderprefix,"/ded_vac_3.dat"),hcat([cdr[i].ded3 for i=1:nsims]...))
+    writedlm(string(folderprefix,"/ded_unvac_r.dat"),hcat([cdr[i].ded4 for i=1:nsims]...))
+    writedlm(string(folderprefix,"/ded_unvac_nr.dat"),hcat([cdr[i].ded5 for i=1:nsims]...))
+    writedlm(string(folderprefix,"/ded_vac_1_r.dat"),hcat([cdr[i].ded6 for i=1:nsims]...))
+    writedlm(string(folderprefix,"/ded_vac_2_r.dat"),hcat([cdr[i].ded7 for i=1:nsims]...))
+    writedlm(string(folderprefix,"/ded_vac_3_r.dat"),hcat([cdr[i].ded8 for i=1:nsims]...))
 
     return mydfs
 end
+
 
 
 function create_folder(ip::cv.ModelParameters,province="us",calibrating = true)

@@ -124,8 +124,7 @@ end
     vaccine_proportion::Vector{Float64} = [0.59;0.33;0.08]
     vaccine_proportion_2::Vector{Float64} = [0.63;0.37;0.0]
     vac_period::Array{Int64,1} = [21;28;999]
-    booster_after::Array{Int64,1} = [180;180;999]
-    vac_boost::Bool = false
+    vac_boost::Bool = true
     time_first_to_booster::Int64 = 9999
     min_age_booster::Int64 = 16
     reduction_omicron::Float64 = 0.0
@@ -162,7 +161,7 @@ end
     relax_over::Int64 = 92
     relax_rate::Float64 = (1-contact_change_2)/relax_over
     turnon::Int64 = 1
-    time_back_to_normal::Int64 = 425
+    time_back_to_normal::Int64 = 999
 
     day_inital_vac::Int64 = 104 ###this must match to the matrices in matrice code
     time_vac_kids::Int64 = 253
@@ -209,7 +208,7 @@ function runsim(simnum, ip::ModelParameters)
     # function runs the `main` function, and collects the data as dataframes. 
     hmatrix, remaining_doses, total_given, lat,hos, icu, ded,lat2, hos2, icu2, ded2,lat3, hos3, icu3, ded3, lat4, hos4, icu4, ded4, lat5, hos5, icu5, ded5, lat6, hos6, icu6, ded6, lat7, hos7, icu7, ded7, lat8, hos8, icu8, ded8  = main(ip,simnum)            
 
-    ###use here to create the vector of comorbidity
+    # use here to create the vector of comorbidity
     # get simulation age groups
     #ags = [x.ag for x in humans] # store a vector of the age group distribution 
     #ags = [x.ag_new for x in humans] # store a vector of the age group distribution 
@@ -220,8 +219,8 @@ function runsim(simnum, ip::ModelParameters)
     spl = _splitstate(hmatrix, ags)
     work = _collectdf(spl[1])
     
-
-    age_groups = [0:4, 5:11, 12:17, 18:49, 50:64, 65:79, 80:999]
+    
+    age_groups = [0:4, 5:17, 18:29, 30:39, 40:49, 50:64, 65:74, 75:84, 85:999]
     ags = map(x->findfirst(y-> x.age in y, age_groups),humans) # store a vector of the age group distribution 
     spl = _splitstate(hmatrix, ags)
     ag1 = _collectdf(spl[1])
@@ -231,41 +230,12 @@ function runsim(simnum, ip::ModelParameters)
     ag5 = _collectdf(spl[5])
     ag6 = _collectdf(spl[6])
     ag7 = _collectdf(spl[7])
+    ag8 = _collectdf(spl[8])
+    ag9 = _collectdf(spl[9])
     insertcols!(all, 1, :sim => simnum); insertcols!(ag1, 1, :sim => simnum); insertcols!(ag2, 1, :sim => simnum); 
     insertcols!(ag3, 1, :sim => simnum); insertcols!(ag4, 1, :sim => simnum); insertcols!(ag5, 1, :sim => simnum);
-    insertcols!(ag6, 1, :sim => simnum); insertcols!(ag7, 1, :sim => simnum); insertcols!(work, 1, :sim => simnum);
- 
-    
-    R01 = zeros(Float64,size(hh1,1))
-
-    for i = 1:size(hh1,1)
-        if length(hh1[i]) > 0
-            R01[i] = length(findall(k -> k.sickby in hh1[i],humans))/length(hh1[i])
-        end
-    end
-
-    R02 = zeros(Float64,size(hh2,1))
-
-    for i = 1:size(hh2,1)
-        if length(hh2[i]) > 0
-            R02[i] = length(findall(k -> k.sickby in hh2[i],humans))/length(hh2[i])
-        end
-    end
-
-    R03 = zeros(Float64,size(hh3,1))
-
-    for i = 1:size(hh3,1)
-        if length(hh3[i]) > 0
-            R03[i] = length(findall(k -> k.sickby in hh3[i],humans))/length(hh3[i])
-        end
-    end
-
-    R04 = zeros(Float64,size(hh4,1))
-    for i = 1:size(hh4,1)
-        if length(hh4[i]) > 0
-            R04[i] = length(findall(k -> k.sickby in hh4[i],humans))/length(hh4[i])
-        end
-    end
+    insertcols!(ag6, 1, :sim => simnum); insertcols!(ag7, 1, :sim => simnum); insertcols!(ag8, 1, :sim => simnum); 
+    insertcols!(ag9, 1, :sim => simnum); insertcols!(work, 1, :sim => simnum);
 
     coverage1 = length(findall(x-> x.age >= 18 && x.vac_status >= 1,humans))/length(findall(x-> x.age >= 18,humans))
     coverage2 = length(findall(x-> x.age >= 18 && x.vac_status == 2,humans))/length(findall(x-> x.age >= 18,humans))
@@ -324,6 +294,7 @@ function runsim(simnum, ip::ModelParameters)
         x = humans[i]
         vector_ded[(x.age+1)] += 1
     end
+
     return (lat=lat, hos=hos, icu=icu, ded=ded, lat2=lat2, hos2=hos2, icu2=icu2, ded2=ded2, lat3=lat3, hos3=hos3, icu3=icu3, ded3=ded3, lat4=lat4, hos4=hos4, icu4=icu4, ded4=ded4, lat5=lat5, hos5=hos5, icu5=icu5, ded5=ded5, lat6=lat6, hos6=hos6, icu6=icu6, ded6=ded6, lat7=lat7, hos7=hos7, icu7=icu7, ded7=ded7, lat8=lat8, hos8=hos8, icu8=icu8, ded8=ded8,
     a=all, g1=ag1, g2=ag2, g3=ag3, g4=ag4, g5=ag5,g6=ag6,g7=ag7,g8=ag8,g9=ag9, work = work,
     cov1 = coverage1,cov2 = coverage2,cov12 = coverage12,cov22 = coverage22,vector_dead=vector_ded,
@@ -952,10 +923,6 @@ function initialize()
         x.ag_new = g
         x.exp = 999  ## susceptible people don't expire.
         x.dur = sample_epi_durations() # sample epi periods   
-        if rand() < p.eldq && x.ag == p.eldqag   ## check if elderly need to be quarantined.
-            x.iso = true   
-            x.isovia = :qu         
-        end
         x.comorbidity = comorbidity(x.age)
         # initialize the next day counts (this is important in initialization since dyntrans runs first)
         get_nextday_counts(x)
