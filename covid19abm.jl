@@ -111,7 +111,7 @@ end
     time_fifth_strain::Int64 = 7 #when will the fifth strain introduced
     fifth_strain_trans::Float64 = 1.35 #transmissibility of fifth strain
 
-    ## Beta - B.1.351
+    ## Omicron - 
     ins_sixth_strain::Bool = true #insert third strain?
     initialinf6::Int64 = 1 #number of initial infected of sixth strain
     time_sixth_strain::Int64 = 441 #when will the sixth strain introduced
@@ -1766,7 +1766,7 @@ function negative_binomials(ag,mult)
     totalbraks = length(means)
     nbinoms = Vector{NegativeBinomial{Float64}}(undef, totalbraks)
     for i = 1:totalbraks
-        p = 1 - (sd[i]^2-means[i])/(sd[i]^2)
+        p = max(0.0001,1 - (sd[i]^2-means[i])/(sd[i]^2))
         r = means[i]^2/(sd[i]^2-means[i])
         nbinoms[i] =  NegativeBinomial(r, p)
     end
@@ -1788,7 +1788,7 @@ function negative_binomials_shelter(ag,mult)
     totalbraks = length(means)
     nbinoms = Vector{NegativeBinomial{Float64}}(undef, totalbraks)
     for i = 1:totalbraks
-        p = 1 - (sd[i]^2-means[i])/(sd[i]^2)
+        p = max(0.0001,1 - (sd[i]^2-means[i])/(sd[i]^2))
         r = means[i]^2/(sd[i]^2-means[i])
         nbinoms[i] =  NegativeBinomial(r, p)
     end
