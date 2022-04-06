@@ -1430,8 +1430,8 @@ function move_to_hospicu(x::Human)
    
     if x.strain == 1 || x.strain == 3 || x.strain == 5
 
-        mh = [0.001, 0.001, 0.0015, 0.0065, 0.01, 0.02, 0.0735, 0.38]
-        mc = [0.002,0.002,0.0022, 0.008, 0.022, 0.04, 0.08, 0.4]
+        mh = 0.75*[0.001, 0.001, 0.0015, 0.0065, 0.01, 0.02, 0.0735, 0.38]
+        mc = 0.75*[0.002,0.002,0.0022, 0.008, 0.022, 0.04, 0.08, 0.4]
 
     elseif x.strain == 2  || x.strain == 4 || x.strain == 6
         #= 
@@ -1443,15 +1443,15 @@ function move_to_hospicu(x::Human)
             mc = 1.5*mc
         end
         =#
-        mh = 0.7*[0.0016, 0.0016, 0.0025, 0.0107, 0.02, 0.038, 0.15, 0.66]
-        mc = 0.7*[0.0033, 0.0033, 0.0036, 0.0131, 0.022, 0.04, 0.2, 0.70]
+        mh = 1.23*[0.0016, 0.0016, 0.0025, 0.0107, 0.02, 0.038, 0.15, 0.66]
+        mc = 1.23*[0.0033, 0.0033, 0.0036, 0.0131, 0.022, 0.04, 0.2, 0.70]
         
         if x.strain == 4
-            mh = 0.8*mh
-            mc = 0.8*mc
+            mh = 0.55*mh
+            mc = 0.55*mc
         elseif x.strain == 6
-            mh = (1-0.8*p.reduction_sev_omicron)*mh
-            mc = (1-0.8*p.reduction_sev_omicron)*mc
+            mh = (1-1.2*p.reduction_sev_omicron)*mh
+            mc = (1-1.2*p.reduction_sev_omicron)*mc
         end
     else
       
