@@ -43,13 +43,13 @@ wdl_adverse_1 = 1.66 #(sd = 1.48)working days lost due to adverse reactions firs
 wdl_adverse_2 = 1.39 #(sd = 0.82)working days lost due to adverse reactions
 
 #Direct costs
-cost_outpatient_appointment = 893.0/10 #outpatient appointment (symptomatic cases)
+cost_outpatient_appointment = 893.0 #outpatient appointment (symptomatic cases)
 n_outpatient_visits = 0.5 #(total number of mild cases / 2) per mild case - ASSUMED
 cost_transp_outpatients = 44.49 #for each visit
 cost_hosp_nICU = 25188.0 #cost of hospital non-ICU admission
 cost_hosp_ICU = 70098.0 #cost of ICU admission
 n_ED_visits = 1 #for each severe non-hospitalized case- ASSUMED
-cost_ED_care = 530.0 #cost ED care
+cost_ED_care = 2200 #cost ED care
 n_EMS_calls = 2.5 #per hospitalized case
 cost_transp_EMS = 1005.0
 r = 0.03 #discount rate
@@ -355,6 +355,12 @@ boot::boot.ci(bb,0.95)$bca
 bb = boot::boot(cost_hospital2,fc,R=500)
 mean(bb$t[,1])
 boot::boot.ci(bb,0.95)$bca
+
+aa = cost_hospital2-cost_hospital
+bb = boot::boot(aa,fc,R=500)
+mean(bb$t[,1])
+boot::boot.ci(bb,0.95)$bca
+
 # Illness and Hospitalization (indirect) ---------------------------------------------------------
 # 
 # LOS: 
@@ -1097,7 +1103,7 @@ ggplot(dd, aes(x = forcats::fct_rev(as.factor(1)), y = ROI,color = as.factor(1),
 
 
 ggsave(
-  "../figures/ROI_soc.pdf",
+  "../data/savings.pdf",
   device = "pdf",
   width = 7,
   height = 4,
