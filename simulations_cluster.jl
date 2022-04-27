@@ -170,7 +170,7 @@ end
 function create_folder(ip::cv.ModelParameters,province="newyorkcity",calibrating = true)
     
     #RF = string("heatmap/results_prob_","$(replace(string(ip.β), "." => "_"))","_vac_","$(replace(string(ip.vaccine_ef), "." => "_"))","_herd_immu_","$(ip.herd)","_$strategy","cov_$(replace(string(ip.cov_val)))") ## 
-    main_folder = "/data/thomas-covid/USomicron"
+    main_folder = "/data/thomas-covid/USbooster_scenarios"
     #main_folder = "."
     if calibrating
         RF = string(main_folder,"/results_prob_","$(replace(string(ip.β), "." => "_"))","_$(ip.file_index)_$(province)") ##  

@@ -176,11 +176,8 @@ end
     
     hosp_red::Float64 = 3.1
 
-    α::Float64 = 1.0
-    α2::Float64 = 0.0
-    α3::Float64 = 1.0
 
-    scenario::Symbol = :statuscuo
+    scenario::Int16 = 1
 
     #one waning rate for each efficacy? For each strain? I can change this structure based on that
 
@@ -188,6 +185,8 @@ end
     reduce_days::Int64 = 0
     ### after calibration, how much do we want to increase the contact rate... in this case, to reach 70%
     ### 0.5*0.95 = 0.475, so we want to multiply this by 1.473684211
+
+    now_modeltime::Int64 = 597
 end
 
 Base.@kwdef mutable struct ct_data_collect
@@ -416,24 +415,24 @@ function main(ip::ModelParameters,sim::Int64)
 
         for st = vtimes[vv[ii]]:(vtimes[vv[ii+1]]-1)
             
-            for x in humans
+            #= for x in humans
                 if x.vaccine_n == 3
                     error("$x")
                 end
-            end
+            end =#
             if length(p.time_change_contact) >= count_change && p.time_change_contact[count_change] == st ###change contact pattern throughout the time
                 setfield!(p, :contact_change_rate, p.change_rate_values[count_change])
                 count_change += 1
             end
 
-            if p.vaccinating
-                if st == p.time_vac_kids
-                    vac_ind = vac_selection(sim,12,agebraks_vac)
-                elseif st == p.time_vac_kids2
-                    vac_ind = vac_selection(sim,5,agebraks_vac)
-                
-                end
-            end 
+            
+            if st == p.time_vac_kids
+                vac_ind = vac_selection(sim,12,agebraks_vac)
+            elseif st == p.time_vac_kids2
+                vac_ind = vac_selection(sim,5,agebraks_vac)
+            
+            end
+            
             if st == p.change_booster_eligibility
                 p.booster_after = deepcopy(p.booster_after_bkup)
             end
@@ -443,7 +442,7 @@ function main(ip::ModelParameters,sim::Int64)
             if st == p.relaxing_time ### time that people vaccinated people is allowed to go back to normal
                 setfield!(p, :relaxed, true)
             end
-          if st >= p.time_back_to_normal && count_relax <= p.relax_over
+            if st >= p.time_back_to_normal && count_relax <= p.relax_over
                 #setfield!(p, :contact_change_2, p.contact_change_2+p.relax_rate)
                 p.contact_change_2 += p.relax_rate
                 count_relax += 1
@@ -467,17 +466,6 @@ function main(ip::ModelParameters,sim::Int64)
                 total_given += aux_[2]
             end
 
-            #auxx = findall(x-> x.vac_status > 0,humans)
-            
-        #=  if length(auxx) > 0
-                aa = sum([humans[x].vac_status for x in auxx]) 
-                if aa != total_given
-                    println("$st $(time_pos+1) erro $total_given $aa")
-                end
-            end =#
-
-            #println([time_vac length(findall(x-> x.vac_status == 2 && x.age >= 18,humans))])
-        
             _get_model_state(st, hmatrix) ## this datacollection needs to be at the start of the for loop
             dyntrans(st, grps,sim)
         

@@ -1,5 +1,4 @@
 # COVID-19 Agent Based Model
-Impact of accelerating booster vaccination amidst Omicron surge in the United States
 
 ## Model details:
 A stochastic, age-stratified agent-based computational model for the transmission dynamics of COVID-19. The computational model simulates autonomous agents (representing individuals in a human population) and their interactions within a constrained virtual environment. Agents follow the natural history of disease, including epidemiological stages of susceptible, infected and incubating, asymptomatic, presymptomatic, and symptomatic with either mild, severe, or critical illness, recovered, and dead.
@@ -10,7 +9,7 @@ Model features include:
 - Asymptomatic, Presymptomatic transmission
 - Isolation of mild/severe cases
 - The average number of daily contacts can be changed to fit to data
-- Four strains (Original, Alpha, Iota and Delta), corresponding to when they were identified in the United States
+- Four strains (Original, Alpha, Gamma, Iota, Delta and Omicron), corresponding to when they were identified in the United States
 - Waning of immunity induced by the vaccine and recovery.
 
 ## How to download and run
@@ -46,13 +45,7 @@ to run the scenarios. The arguments are
 - modeltime: Int64 \- simulated time (number of days).
 - when_relax: Int64 \- time starting applying double dose in all age groups (keep it 999).
 - turnon and waning: Int64 \- if vaccinated people have oscillations in contact pattern and if waning is on. Keep it at 1 and 1.
-- red: Float64 \- Immunity escape of Omicron (0.8).
-- trans: Float64 \- Transmissibility of Omicron compared to Delta (1.35).
-- redred: Float64 \- Booster mitigating of reduction (0.75).
 - nb: Int64 \- Number of booster per person.
-- ddkids and rate_kids: Int64 and Float64 \- day to start increasing the doses for kids, the proportion for increase. Not used here.
-- boost_inc_day: Int64 \- Day for booster rate increase.
-- boost_inc: Float64 \- Increase proportion (2x, 3x).
 - change_elig: Int64 \- Day of change in the eligibility for booster.
 - ba: Vector{Int64} \- New eligibility (per vaccine).
 
