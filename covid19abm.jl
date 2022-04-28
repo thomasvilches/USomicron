@@ -53,6 +53,7 @@ Base.@kwdef mutable struct Human
     vac_eff_sev::Array{Array{Array{Float64,1},1},1} = [[[0.0]]]
 
     waning::Vector{Float64} = [1.0;1.0]
+    tested::Bool = false
     
 end
 
@@ -497,7 +498,7 @@ function main(ip::ModelParameters,sim::Int64)
 
     ind1,ind2,indb,r1,r2,rb = calc_rates(sim)
 
-    for st = p.now_modeltime+1:p.modeltime
+    for st = p.now_modeltime+1:p.now_modeltime+p.time_horizon
         #println(st)
         if length(p.time_change_contact) >= count_change && p.time_change_contact[count_change] == st ###change contact pattern throughout the time
             setfield!(p, :contact_change_rate, p.change_rate_values[count_change])
@@ -517,6 +518,25 @@ function main(ip::ModelParameters,sim::Int64)
         # end of day
     end
 
+    for st = p.now_modeltime+1+p.time_horizon:p.modeltime
+        #println(st)
+        if length(p.time_change_contact) >= count_change && p.time_change_contact[count_change] == st ###change contact pattern throughout the time
+            setfield!(p, :contact_change_rate, p.change_rate_values[count_change])
+            count_change += 1
+        end
+
+        ## change it here!!! this is the important part
+        
+        #p.scenario > 0 && vac_time_extra!(sim,st,ind1,ind2,indb,r1,r2,rb)
+       
+        _get_model_state(st, hmatrix) ## this datacollection needs to be at the start of the for loop
+        dyntrans(st, grps,sim)
+    
+        lat[st],hos[st], icu[st], ded[st],lat2[st], hos2[st], icu2[st], ded2[st],lat3[st], hos3[st], icu3[st], ded3[st], lat4[st], hos4[st], icu4[st], ded4[st], lat5[st], hos5[st], icu5[st], ded5[st], lat6[st], hos6[st], icu6[st], ded6[st], lat7[st], hos7[st], icu7[st], ded7[st], lat8[st], hos8[st], icu8[st], ded8[st] = time_update() ###update the system
+
+        
+        # end of day
+    end
     return hmatrix, remaining_doses, total_given, lat,hos, icu, ded,lat2, hos2, icu2, ded2,lat3, hos3, icu3, ded3, lat4, hos4, icu4, ded4, lat5, hos5, icu5, ded5, lat6, hos6, icu6, ded6, lat7, hos7, icu7, ded7, lat8, hos8, icu8, ded8 ## return the model state as well as the age groups. 
 end
 export main
@@ -593,6 +613,10 @@ function calc_rates(sim)
     r1 = Int(ceil(length(ind1)/(p.time_horizon-p.vac_period[2])))
     r2 = Int(ceil(length(ind2)/(p.time_horizon)))
     rb = Int(ceil(length(vcat(indb...))/(p.time_horizon)))
+
+    for ii in vcat(indb...)
+        humans[ii].tested = true
+    end
 
     return ind1,ind2,indb,r1,r2,rb
 end
@@ -738,6 +762,7 @@ function vac_time_extra!(sim::Int64,st::Int64,ind1,ind2,indb,r1::Int64,r2::Int64
             x.days_vac = 0
             x.index_day = 1
             x.boosted = true
+            x.tested = false
             x.n_boosted += 1
             #### ADD here the new vaccine efficacy against Omicron for booster
                 
@@ -765,6 +790,53 @@ function vac_time_extra!(sim::Int64,st::Int64,ind1,ind2,indb,r1::Int64,r2::Int64
                 else
                     x.recvac = 2
                 end
+            end
+        end
+    end
+
+
+    ### Let's add booster to dose ones who become eligible!
+    max_boost = [0;1;2;2][p.scenario+1]
+    pos = findall(xx-> xx.vac_status == 2 && xx.n_boosted < max_boost && xx.days_vac >= p.booster_after[xx.vaccine_n] && !xx.tested && !(xx.health_status in aux_states),humans)
+    l2 = length(pos)
+    if l2 > 0
+        for i in pos
+            x = humans[i]
+            if rand() < p.intervention_prob
+                x.days_vac = 0
+                x.index_day = 1
+                x.boosted = true
+                x.tested = false
+                x.n_boosted += 1
+                #### ADD here the new vaccine efficacy against Omicron for booster
+                    
+                x.vac_eff_inf[6][2][end] = [0.76;0.677][x.vaccine_n]
+                x.vac_eff_symp[6][2][end] = 0.82
+                x.vac_eff_sev[6][2][end] = 0.90
+                #moderna has a different value against Delta for booster
+                x.vac_eff_inf[4][2][end] = [x.vac_eff_inf[4][2][end]; 0.94][x.vaccine_n]
+
+                if x.recovered
+                    index = Int(floor(x.days_recovered/7))
+
+                    if index > 0
+                        if index <= size(waning_factors_rec,1)
+                            aux = waning_factors_rec[index,1]
+                        else
+                            aux = waning_factors_rec[end,1]
+                        end
+                    else
+                        aux = 1.0
+                    end
+
+                    if aux > x.vac_eff_inf[1][x.vac_status][end]
+                        x.recvac = 1
+                    else
+                        x.recvac = 2
+                    end
+                end
+            else
+                x.tested = true
             end
         end
     end
