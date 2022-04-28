@@ -117,13 +117,22 @@ function run(myp::cv.ModelParameters, nsims=1000, folderprefix="./")
     vac_j_3 = [cdr[i].n_jensen_3 for i=1:nsims]
     vac_j_w_3 = [cdr[i].n_jensen_w_3 for i=1:nsims]
 
+    vac_m_4 = [cdr[i].n_moderna_4 for i=1:nsims]
+    vac_m_w_4 = [cdr[i].n_moderna_w_4 for i=1:nsims]
+
+    vac_p_4 = [cdr[i].n_pfizer_4 for i=1:nsims]
+    vac_p_w_4 = [cdr[i].n_pfizer_w_4 for i=1:nsims]
+
+    vac_j_4 = [cdr[i].n_jensen_4 for i=1:nsims]
+    vac_j_w_4 = [cdr[i].n_jensen_w_4 for i=1:nsims]
+
     remaining = [cdr[i].remaining for i=1:nsims]
     total = [cdr[i].total_given for i=1:nsims]
 
 
 
-    writedlm(string(folderprefix,"/vaccine_all.dat"),[vac_p vac_m vac_j vac_p_2 vac_m_2 vac_j_2 vac_p_3 vac_m_3 vac_j_3 remaining total])
-    writedlm(string(folderprefix,"/vaccine_working.dat"),[vac_p_w vac_m_w vac_j_w vac_p_w_2 vac_m_w_2 vac_j_w_2 vac_p_w_3 vac_m_w_3 vac_j_w_3])
+    writedlm(string(folderprefix,"/vaccine_all.dat"),[vac_p vac_m vac_j vac_p_2 vac_m_2 vac_j_2 vac_p_3 vac_m_3 vac_j_3 vac_p_4 vac_m_4 vac_j_4])
+    writedlm(string(folderprefix,"/vaccine_working.dat"),[vac_p_w vac_m_w vac_j_w vac_p_w_2 vac_m_w_2 vac_j_w_2 vac_p_w_3 vac_m_w_3 vac_j_w_3 vac_p_w_4 vac_m_w_4 vac_j_w_4])
 
     writedlm(string(folderprefix,"/year_of_death.dat"),hcat([cdr[i].vector_dead for i=1:nsims]...))
 
@@ -187,7 +196,6 @@ end
 
 function run_param_scen_cal(calibrating::Bool,b::Float64,province::String="usa",ic1::Int64=1,ic2::Int64=1,ic3::Int64=1,ic4::Int64=1,ic5::Int64=1,ic6::Int64=1,index::Int64 = 0,rc=[0.0],dc=[0],mt::Int64=500,vac::Bool=true,tbn::Int64 = 999,ro::Int64 = 1,dr::Int64=0,hospar::Float64 = 3.1,nsims::Int64=500)
     
-    
     #b = bd[h_i]
     #ic = init_con[h_i]
     @everywhere ip = cv.ModelParameters(β=$b,fsevere = 1.0,fmild = 1.0,vaccinating = $vac,
@@ -196,7 +204,8 @@ function run_param_scen_cal(calibrating::Bool,b::Float64,province::String="usa",
     modeltime=$mt, prov = Symbol($province),
     time_change_contact = $dc,
     change_rate_values = $rc,time_back_to_normal = $tbn,relax_over = $ro, reduce_days = $dr,
-    hosp_red = $hospar)
+    hosp_red = $hospar,
+    scenario = $index)
 
     folder = create_folder(ip,province,calibrating)
 
