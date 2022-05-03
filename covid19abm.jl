@@ -66,7 +66,6 @@ end
     calibration::Bool = false
     calibration2::Bool = false 
     start_several_inf::Bool = true
-    modeltime::Int64 = 518
     initialinf::Int64 = 20
     τmild::Int64 = 0 ## days before they self-isolate for mild cases
     τsevere::Int64 = 0 ## days before they self-isolate for mild cases
@@ -179,17 +178,16 @@ end
 
 
     scenario::Int16 = 1
-    time_horizon::Int16 = 90
+    time_horizon::Int16 = 973
     intervention_prob::Float16 = 0.8
 
     #one waning rate for each efficacy? For each strain? I can change this structure based on that
 
     waning::Int64 = 1
     reduce_days::Int64 = 0
+    modeltime::Vector{Int64} = [973;-1;-3;-5;-7;-9]
     ### after calibration, how much do we want to increase the contact rate... in this case, to reach 70%
     ### 0.5*0.95 = 0.475, so we want to multiply this by 1.473684211
-
-    now_modeltime::Int64 = 592
 end
 
 Base.@kwdef mutable struct ct_data_collect
@@ -342,7 +340,9 @@ function main(ip::ModelParameters,sim::Int64)
 
     p.popsize == 0 && error("no population size given")
     
-    hmatrix = zeros(Int16, p.popsize, p.modeltime)
+    
+
+    hmatrix = zeros(Int16, p.popsize, p.time_horizon)
     initialize() # initialize population
     
     vac_rate_1::Matrix{Int64} = vaccination_rate_1(sim)
@@ -376,41 +376,41 @@ function main(ip::ModelParameters,sim::Int64)
 
     #these vectors will record incidence by vaccination status
     #one dose, two doses, boosted, unvac recovered, unvac non recovered
-    lat::Vector{Int64} = zeros(Int64,p.modeltime)
-    lat2::Vector{Int64} = zeros(Int64,p.modeltime)
-    lat3::Vector{Int64} = zeros(Int64,p.modeltime)
-    lat4::Vector{Int64} = zeros(Int64,p.modeltime)
-    lat5::Vector{Int64} = zeros(Int64,p.modeltime)
-    lat6::Vector{Int64} = zeros(Int64,p.modeltime)
-    lat7::Vector{Int64} = zeros(Int64,p.modeltime)
-    lat8::Vector{Int64} = zeros(Int64,p.modeltime)
+    lat::Vector{Int64} = zeros(Int64, p.time_horizon)
+    lat2::Vector{Int64} = zeros(Int64, p.time_horizon)
+    lat3::Vector{Int64} = zeros(Int64, p.time_horizon)
+    lat4::Vector{Int64} = zeros(Int64, p.time_horizon)
+    lat5::Vector{Int64} = zeros(Int64, p.time_horizon)
+    lat6::Vector{Int64} = zeros(Int64, p.time_horizon)
+    lat7::Vector{Int64} = zeros(Int64, p.time_horizon)
+    lat8::Vector{Int64} = zeros(Int64, p.time_horizon)
 
-    hos::Vector{Int64} = zeros(Int64,p.modeltime)
-    hos2::Vector{Int64} = zeros(Int64,p.modeltime)
-    hos3::Vector{Int64} = zeros(Int64,p.modeltime)
-    hos4::Vector{Int64} = zeros(Int64,p.modeltime)
-    hos5::Vector{Int64} = zeros(Int64,p.modeltime)
-    hos6::Vector{Int64} = zeros(Int64,p.modeltime)
-    hos7::Vector{Int64} = zeros(Int64,p.modeltime)
-    hos8::Vector{Int64} = zeros(Int64,p.modeltime)
+    hos::Vector{Int64} = zeros(Int64, p.time_horizon)
+    hos2::Vector{Int64} = zeros(Int64, p.time_horizon)
+    hos3::Vector{Int64} = zeros(Int64, p.time_horizon)
+    hos4::Vector{Int64} = zeros(Int64, p.time_horizon)
+    hos5::Vector{Int64} = zeros(Int64, p.time_horizon)
+    hos6::Vector{Int64} = zeros(Int64, p.time_horizon)
+    hos7::Vector{Int64} = zeros(Int64, p.time_horizon)
+    hos8::Vector{Int64} = zeros(Int64, p.time_horizon)
 
-    icu::Vector{Int64} = zeros(Int64,p.modeltime)
-    icu2::Vector{Int64} = zeros(Int64,p.modeltime)
-    icu3::Vector{Int64} = zeros(Int64,p.modeltime)
-    icu4::Vector{Int64} = zeros(Int64,p.modeltime)
-    icu5::Vector{Int64} = zeros(Int64,p.modeltime)
-    icu6::Vector{Int64} = zeros(Int64,p.modeltime)
-    icu7::Vector{Int64} = zeros(Int64,p.modeltime)
-    icu8::Vector{Int64} = zeros(Int64,p.modeltime)
+    icu::Vector{Int64} = zeros(Int64, p.time_horizon)
+    icu2::Vector{Int64} = zeros(Int64, p.time_horizon)
+    icu3::Vector{Int64} = zeros(Int64, p.time_horizon)
+    icu4::Vector{Int64} = zeros(Int64, p.time_horizon)
+    icu5::Vector{Int64} = zeros(Int64, p.time_horizon)
+    icu6::Vector{Int64} = zeros(Int64, p.time_horizon)
+    icu7::Vector{Int64} = zeros(Int64, p.time_horizon)
+    icu8::Vector{Int64} = zeros(Int64, p.time_horizon)
 
-    ded::Vector{Int64} = zeros(Int64,p.modeltime)
-    ded2::Vector{Int64} = zeros(Int64,p.modeltime)
-    ded3::Vector{Int64} = zeros(Int64,p.modeltime)
-    ded4::Vector{Int64} = zeros(Int64,p.modeltime)
-    ded5::Vector{Int64} = zeros(Int64,p.modeltime)
-    ded6::Vector{Int64} = zeros(Int64,p.modeltime)
-    ded7::Vector{Int64} = zeros(Int64,p.modeltime)
-    ded8::Vector{Int64} = zeros(Int64,p.modeltime)
+    ded::Vector{Int64} = zeros(Int64, p.time_horizon)
+    ded2::Vector{Int64} = zeros(Int64, p.time_horizon)
+    ded3::Vector{Int64} = zeros(Int64, p.time_horizon)
+    ded4::Vector{Int64} = zeros(Int64, p.time_horizon)
+    ded5::Vector{Int64} = zeros(Int64, p.time_horizon)
+    ded6::Vector{Int64} = zeros(Int64, p.time_horizon)
+    ded7::Vector{Int64} = zeros(Int64, p.time_horizon)
+    ded8::Vector{Int64} = zeros(Int64, p.time_horizon)
     
   
 
@@ -418,7 +418,7 @@ function main(ip::ModelParameters,sim::Int64)
     vac_ind::Vector{Vector{Int64}} = vac_selection(sim,16,agebraks_vac)
    
 
-    vtimes = [1;p.time_sec_strain;p.time_third_strain;p.time_fourth_strain;p.time_fifth_strain;p.time_sixth_strain;p.now_modeltime+1]
+    vtimes = [1;p.time_sec_strain;p.time_third_strain;p.time_fourth_strain;p.time_fifth_strain;p.time_sixth_strain;p.modeltime[1]+1]
     vorder = map(y-> y,1:length(vtimes))
     perm = sortperm(vtimes)
     perm = perm[1:findfirst(y-> y == length(vtimes),perm)]
@@ -426,7 +426,7 @@ function main(ip::ModelParameters,sim::Int64)
     # start the time loop
 
     initinfvector::Vector{Int64} = [p.initialinf;p.initialinf2;p.initialinf3;p.initialinf4;p.initialinf5;p.initialinf6]
-
+    ## vaccinate up to modeltime[1] with normal rates
     for ii in 1:(length(vv)-1)
         insert_infected(PRE, initinfvector[vv[ii]], 4, vv[ii])
 
@@ -493,32 +493,8 @@ function main(ip::ModelParameters,sim::Int64)
         end
     end
     
-    #create a function here to calculate the number of daily doses
-    #copy the loop above without the ifelse statements
-
-    ind1,ind2,indb,r1,r2,rb = calc_rates(sim)
-
-    for st = p.now_modeltime+1:p.now_modeltime+p.time_horizon
-        #println(st)
-        if length(p.time_change_contact) >= count_change && p.time_change_contact[count_change] == st ###change contact pattern throughout the time
-            setfield!(p, :contact_change_rate, p.change_rate_values[count_change])
-            count_change += 1
-        end
-
-        ## change it here!!! this is the important part
-        
-        p.scenario > 0 && vac_time_extra!(sim,st,ind1,ind2,indb,r1,r2,rb)
-       
-        _get_model_state(st, hmatrix) ## this datacollection needs to be at the start of the for loop
-        dyntrans(st, grps,sim)
-    
-        lat[st],hos[st], icu[st], ded[st],lat2[st], hos2[st], icu2[st], ded2[st],lat3[st], hos3[st], icu3[st], ded3[st], lat4[st], hos4[st], icu4[st], ded4[st], lat5[st], hos5[st], icu5[st], ded5[st], lat6[st], hos6[st], icu6[st], ded6[st], lat7[st], hos7[st], icu7[st], ded7[st], lat8[st], hos8[st], icu8[st], ded8[st] = time_update() ###update the system
-
-        
-        # end of day
-    end
-
-    for st = p.now_modeltime+1+p.time_horizon:p.modeltime
+    # do not vaccinate
+    for st = p.modeltime[1]+1:p.modeltime[2]
         #println(st)
         if length(p.time_change_contact) >= count_change && p.time_change_contact[count_change] == st ###change contact pattern throughout the time
             setfield!(p, :contact_change_rate, p.change_rate_values[count_change])
@@ -537,6 +513,97 @@ function main(ip::ModelParameters,sim::Int64)
         
         # end of day
     end
+
+    dayss = p.modeltime[3]-p.modeltime[2]
+    ind1,ind2,indb,r1,r2,rb = calc_rates(sim,dayss)
+    # First Pulse
+    for st = p.modeltime[2]+1:p.modeltime[3]
+        #println(st)
+        if length(p.time_change_contact) >= count_change && p.time_change_contact[count_change] == st ###change contact pattern throughout the time
+            setfield!(p, :contact_change_rate, p.change_rate_values[count_change])
+            count_change += 1
+        end
+
+        ## change it here!!! this is the important part
+        
+        p.scenario > 0 && vac_time_extra!(sim,st,ind1,ind2,indb,r1,r2,rb)
+       
+        _get_model_state(st, hmatrix) ## this datacollection needs to be at the start of the for loop
+        dyntrans(st, grps,sim)
+    
+        lat[st],hos[st], icu[st], ded[st],lat2[st], hos2[st], icu2[st], ded2[st],lat3[st], hos3[st], icu3[st], ded3[st], lat4[st], hos4[st], icu4[st], ded4[st], lat5[st], hos5[st], icu5[st], ded5[st], lat6[st], hos6[st], icu6[st], ded6[st], lat7[st], hos7[st], icu7[st], ded7[st], lat8[st], hos8[st], icu8[st], ded8[st] = time_update() ###update the system
+
+        
+        # end of day
+    end
+    #do not vaccinate for some time
+    for st = p.modeltime[3]+1:p.modeltime[4]
+        #println(st)
+        if length(p.time_change_contact) >= count_change && p.time_change_contact[count_change] == st ###change contact pattern throughout the time
+            setfield!(p, :contact_change_rate, p.change_rate_values[count_change])
+            count_change += 1
+        end
+
+        ## change it here!!! this is the important part
+        
+        #p.scenario > 0 && vac_time_extra!(sim,st,ind1,ind2,indb,r1,r2,rb)
+       
+        _get_model_state(st, hmatrix) ## this datacollection needs to be at the start of the for loop
+        dyntrans(st, grps,sim)
+    
+        lat[st],hos[st], icu[st], ded[st],lat2[st], hos2[st], icu2[st], ded2[st],lat3[st], hos3[st], icu3[st], ded3[st], lat4[st], hos4[st], icu4[st], ded4[st], lat5[st], hos5[st], icu5[st], ded5[st], lat6[st], hos6[st], icu6[st], ded6[st], lat7[st], hos7[st], icu7[st], ded7[st], lat8[st], hos8[st], icu8[st], ded8[st] = time_update() ###update the system
+
+        
+        # end of day
+    end
+
+    for x in humans
+        x.tested = false # I want to reset this
+    end
+    
+    dayss = p.modeltime[5]-p.modeltime[4]
+    ind1,ind2,indb,r1,r2,rb = calc_rates(sim,dayss)
+    #Second pulse
+    for st = p.modeltime[4]+1:p.modeltime[5]
+        #println(st)
+        if length(p.time_change_contact) >= count_change && p.time_change_contact[count_change] == st ###change contact pattern throughout the time
+            setfield!(p, :contact_change_rate, p.change_rate_values[count_change])
+            count_change += 1
+        end
+
+        ## change it here!!! this is the important part
+        
+        p.scenario > 0 && vac_time_extra!(sim,st,ind1,ind2,indb,r1,r2,rb)
+       
+        _get_model_state(st, hmatrix) ## this datacollection needs to be at the start of the for loop
+        dyntrans(st, grps,sim)
+    
+        lat[st],hos[st], icu[st], ded[st],lat2[st], hos2[st], icu2[st], ded2[st],lat3[st], hos3[st], icu3[st], ded3[st], lat4[st], hos4[st], icu4[st], ded4[st], lat5[st], hos5[st], icu5[st], ded5[st], lat6[st], hos6[st], icu6[st], ded6[st], lat7[st], hos7[st], icu7[st], ded7[st], lat8[st], hos8[st], icu8[st], ded8[st] = time_update() ###update the system
+
+        
+        # end of day
+    end
+    # run up to the end of the simulation without vaccinating
+    for st = p.modeltime[5]+1:p.modeltime[6]
+        #println(st)
+        if length(p.time_change_contact) >= count_change && p.time_change_contact[count_change] == st ###change contact pattern throughout the time
+            setfield!(p, :contact_change_rate, p.change_rate_values[count_change])
+            count_change += 1
+        end
+
+        ## change it here!!! this is the important part
+        
+        #p.scenario > 0 && vac_time_extra!(sim,st,ind1,ind2,indb,r1,r2,rb)
+       
+        _get_model_state(st, hmatrix) ## this datacollection needs to be at the start of the for loop
+        dyntrans(st, grps,sim)
+    
+        lat[st],hos[st], icu[st], ded[st],lat2[st], hos2[st], icu2[st], ded2[st],lat3[st], hos3[st], icu3[st], ded3[st], lat4[st], hos4[st], icu4[st], ded4[st], lat5[st], hos5[st], icu5[st], ded5[st], lat6[st], hos6[st], icu6[st], ded6[st], lat7[st], hos7[st], icu7[st], ded7[st], lat8[st], hos8[st], icu8[st], ded8[st] = time_update() ###update the system
+
+        
+        # end of day
+    end
+
     return hmatrix, remaining_doses, total_given, lat,hos, icu, ded,lat2, hos2, icu2, ded2,lat3, hos3, icu3, ded3, lat4, hos4, icu4, ded4, lat5, hos5, icu5, ded5, lat6, hos6, icu6, ded6, lat7, hos7, icu7, ded7, lat8, hos8, icu8, ded8 ## return the model state as well as the age groups. 
 end
 export main
@@ -567,7 +634,7 @@ function vac_selection(sim::Int64,age::Int64,agebraks_vac)
     return v
 end
 
-function calc_rates(sim)
+function calc_rates(sim,time_horizon)
     
     if p.scenario == 1
         ind1 = findall(x-> x.age in 5:17 && x.vac_status == 0 && x.health_status != DED, humans)
@@ -610,9 +677,9 @@ function calc_rates(sim)
        indb = map(y->get_sample(3,sim,y),indb)
     end
 
-    r1 = Int(ceil(length(ind1)/(p.time_horizon-p.vac_period[2])))
-    r2 = Int(ceil(length(ind2)/(p.time_horizon)))
-    rb = Int(ceil(length(vcat(indb...))/(p.time_horizon)))
+    r1 = Int(ceil(length(ind1)/(time_horizon-p.vac_period[2])))
+    r2 = Int(ceil(length(ind2)/(time_horizon)))
+    rb = Int(ceil(length(vcat(indb...))/(time_horizon)))
 
     for ii in vcat(indb...)
         humans[ii].tested = true
@@ -1197,7 +1264,7 @@ function _collectdf(hmatrix)
     _names_prev = Symbol.(string.((Symbol.(instances(HEALTH)[1:end - 1])), "_PREV"))
     _names = vcat(_names_inc..., _names_prev...)
     datf = DataFrame(mdf, _names)
-    insertcols!(datf, 1, :time => 1:p.modeltime) ## add a time column to the resulting dataframe
+    insertcols!(datf, 1, :time => 1:p.time_horizon) ## add a time column to the resulting dataframe
     return datf
 end
 
@@ -1215,8 +1282,8 @@ export _splitstate
 
 function _get_incidence_and_prev(hmatrix)
     cols = instances(HEALTH)[1:end - 1] ## don't care about the UNDEF health status
-    inc = zeros(Int64, p.modeltime, length(cols))
-    pre = zeros(Int64, p.modeltime, length(cols))
+    inc = zeros(Int64, p.time_horizon, length(cols))
+    pre = zeros(Int64, p.time_horizon, length(cols))
     for i = 1:length(cols)
         inc[:, i] = _get_column_incidence(hmatrix, cols[i])
         pre[:, i] = _get_column_prevalence(hmatrix, cols[i])
@@ -1226,7 +1293,7 @@ end
 
 function _get_column_incidence(hmatrix, hcol)
     inth = Int(hcol)
-    timevec = zeros(Int64, p.modeltime)
+    timevec = zeros(Int64, p.time_horizon)
     for r in eachrow(hmatrix)
         idx = findall(x-> r[x] == inth && r[x] != r[x-1],2:length(r))
         idx = idx .+ 1
@@ -1296,7 +1363,7 @@ end
 
 function _get_column_prevalence(hmatrix, hcol)
     inth = Int(hcol)
-    timevec = zeros(Int64, p.modeltime)
+    timevec = zeros(Int64, p.time_horizon)
     for (i, c) in enumerate(eachcol(hmatrix))
         idx = findall(x -> x == inth, c)
         if idx !== nothing
