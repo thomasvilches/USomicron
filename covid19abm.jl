@@ -560,7 +560,7 @@ function main(ip::ModelParameters,sim::Int64)
     for x in humans
         x.tested = false # I want to reset this
     end
-    
+
     dayss = p.modeltime[5]-p.modeltime[4]
     ind1,ind2,indb,r1,r2,rb = calc_rates(sim,dayss)
     #Second pulse
@@ -657,6 +657,10 @@ function calc_rates(sim,time_horizon)
         indb = [indb1,indb2]
     elseif p.scenario == 4
     elseif p.scenario == 0
+        ind1 = []
+        ind2 = []
+        indb = []
+    elseif p.scenario == 999
         ind1 = []
         ind2 = []
         indb = []
@@ -864,7 +868,8 @@ function vac_time_extra!(sim::Int64,st::Int64,ind1,ind2,indb,r1::Int64,r2::Int64
 
     ### Let's add booster to dose ones who become eligible!
     max_boost = [0;1;2;2][p.scenario+1]
-    pos = findall(xx-> xx.vac_status == 2 && xx.n_boosted < max_boost && xx.days_vac >= p.booster_after[xx.vaccine_n] && !xx.tested && !(xx.health_status in aux_states),humans)
+    age_boost = [0:0,5:17,50:100,18:100][p.scenario+1]
+    pos = findall(xx-> xx.age in age_boost && xx.vac_status == 2 && xx.n_boosted < max_boost && xx.days_vac >= p.booster_after[xx.vaccine_n] && !xx.tested && !(xx.health_status in aux_states),humans)
     l2 = length(pos)
     if l2 > 0
         for i in pos

@@ -176,13 +176,13 @@ function run(myp::cv.ModelParameters, nsims=1000, folderprefix="./")
 end
 
 
-function create_folder(ip::cv.ModelParameters,province="newyorkcity",calibrating = true)
+function create_folder(ip::cv.ModelParameters,province="usa",calibrating = true,letter = "A")
     
     #RF = string("heatmap/results_prob_","$(replace(string(ip.β), "." => "_"))","_vac_","$(replace(string(ip.vaccine_ef), "." => "_"))","_herd_immu_","$(ip.herd)","_$strategy","cov_$(replace(string(ip.cov_val)))") ## 
     main_folder = "/data/thomas-covid/USbooster_scenarios"
     #main_folder = "."
     if calibrating
-        RF = string(main_folder,"/results_prob_","$(replace(string(ip.β), "." => "_"))","_$(ip.file_index)_$(province)") ##  
+        RF = string(main_folder,"/results_prob_","$(replace(string(ip.β), "." => "_"))","_$(ip.file_index)_$(letter)_$(province)") ##  
     else
         RF = string(main_folder,"/results_prob_$(ip.file_index)_$(province)") ##  
     end
@@ -194,8 +194,9 @@ end
 
 
 
-function run_param_scen_cal(calibrating::Bool,b::Float64,province::String="usa",ic1::Int64=1,ic2::Int64=1,ic3::Int64=1,ic4::Int64=1,ic5::Int64=1,ic6::Int64=1,index::Int64 = 0,rc=[0.0],dc=[0],mt::Vector{Int64}=[973;-1;-3;-5;-7;-8],vac::Bool=true,tbn::Int64 = 999,ro::Int64 = 1,dr::Int64=0,hospar::Float64 = 3.1,nsims::Int64=500)
+function run_param_scen_cal(calibrating::Bool,b::Float64,province::String="usa",ic1::Int64=1,ic2::Int64=1,ic3::Int64=1,ic4::Int64=1,ic5::Int64=1,ic6::Int64=1,index::Int64 = 0,idxtime::Int64 = 1,rc=[0.0],dc=[0],mt::Vector{Int64}=[973;-1;-3;-5;-7;-8],vac::Bool=true,tbn::Int64 = 999,ro::Int64 = 1,dr::Int64=0,hospar::Float64 = 3.1,nsims::Int64=500)
     
+    letters = ["A";"B";"C";"D"]
     #b = bd[h_i]
     #ic = init_con[h_i]
     @everywhere ip = cv.ModelParameters(β=$b,fsevere = 1.0,fmild = 1.0,vaccinating = $vac,
@@ -207,7 +208,7 @@ function run_param_scen_cal(calibrating::Bool,b::Float64,province::String="usa",
     hosp_red = $hospar,
     scenario = $index)
 
-    folder = create_folder(ip,province,calibrating)
+    folder = create_folder(ip,province,calibrating,letters[idxtime])
 
     #println("$v_e $(ip.vaccine_ef)")
     run(ip,nsims,folder)
