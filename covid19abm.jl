@@ -18,7 +18,7 @@ Base.@kwdef mutable struct Human
     tis::Int16   = 0   # time in state 
     exp::Int16   = 0   # max statetime
     dur::NTuple{4, Int8} = (0, 0, 0, 0)   # Order: (latents, asymps, pres, infs) TURN TO NAMED TUPS LATER
-    doi::Int16   = 999   # day of infection.
+    doi::Int16   = 9999   # day of infection.
     iso::Bool = false  ## isolated (limited contacts)
     isovia::Symbol = :null ## isolated via quarantine (:qu), preiso (:pi), intervention measure (:im), or contact tracing (:ct)    
     tracing::Bool = false ## are we tracing contacts for this individual?
@@ -54,6 +54,7 @@ Base.@kwdef mutable struct Human
 
     waning::Vector{Float64} = [1.0;1.0]
     tested::Bool = false
+    max_boost::Int8 = 0
     
 end
 
@@ -122,13 +123,13 @@ end
 
     vaccine_proportion::Vector{Float64} = [0.59;0.33;0.08]
     vaccine_proportion_2::Vector{Float64} = [0.63;0.37;0.0]
-    vac_period::Array{Int64,1} = [21;28;999]
+    vac_period::Array{Int64,1} = [21;28;9999]
     n_boosts::Int64 = 1
     min_age_booster::Int64 = 16
     reduction_omicron::Float64 = 0.6 ##not using
     #=------------ Vaccine Efficacy ----------------------------=#
-    booster_after::Array{Int64,1} = [180;180;999]
-    booster_after_bkup::Array{Int64,1} = [150;150;999]
+    booster_after::Array{Int64,1} = [180;180;9999]
+    booster_after_bkup::Array{Int64,1} = [150;150;9999]
     change_booster_eligibility::Int64 = 490
     #=------------ Vaccine Efficacy ----------------------------=#
     days_to_protection::Array{Array{Array{Int64,1},1},1} = [[[14;21],[0;7]],[[14;21],[0;7]],[[14]]]
@@ -656,6 +657,11 @@ function calc_rates(sim,time_horizon)
         indb2 = findall(x-> x.age in 18:100 && x.health_status != DED && x.vac_status == 2 && x.n_boosted == 1 && x.days_vac >= p.booster_after[x.vaccine_n], humans)
         indb = [indb1,indb2]
     elseif p.scenario == 4
+        ind1 = findall(x-> x.age in 5:100 && x.vac_status == 0 && x.health_status != DED, humans)
+        ind2 = findall(x-> x.age in 5:100 && x.vac_status == 1 && x.health_status != DED, humans)
+        indb1 = findall(x-> x.age in 5:100 && x.health_status != DED && x.vac_status == 2 && !x.boosted, humans)
+        indb2 = findall(x-> x.age in 18:100 && x.health_status != DED && x.vac_status == 2 && x.n_boosted == 1 && x.days_vac >= p.booster_after[x.vaccine_n], humans)
+        indb = [indb1,indb2]
     elseif p.scenario == 0
         ind1 = []
         ind2 = []
@@ -677,6 +683,11 @@ function calc_rates(sim,time_horizon)
         ind2 = get_sample(2,sim,ind2)
     end
 
+    #we need to do this before sampling... to avoid vaccinating a lot of people at once
+    for ii in vcat(indb...)
+        humans[ii].tested = true
+    end
+
     if length(indb) > 0
        indb = map(y->get_sample(3,sim,y),indb)
     end
@@ -684,10 +695,6 @@ function calc_rates(sim,time_horizon)
     r1 = Int(ceil(length(ind1)/(time_horizon-p.vac_period[2])))
     r2 = Int(ceil(length(ind2)/(time_horizon)))
     rb = Int(ceil(length(vcat(indb...))/(time_horizon)))
-
-    for ii in vcat(indb...)
-        humans[ii].tested = true
-    end
 
     return ind1,ind2,indb,r1,r2,rb
 end
@@ -819,7 +826,7 @@ function vac_time_extra!(sim::Int64,st::Int64,ind1,ind2,indb,r1::Int64,r2::Int64
         end
     end
    
-    ### Let's add booster... those are extra doses, we don't care about missing doses
+    ### Let's add booster...
 
     pos = map(y-> findall(xx-> humans[xx].vac_status == 2 && humans[xx].n_boosted < y && !(humans[xx].health_status in aux_states),indb[y]),1:length(indb))
 
@@ -867,9 +874,9 @@ function vac_time_extra!(sim::Int64,st::Int64,ind1,ind2,indb,r1::Int64,r2::Int64
 
 
     ### Let's add booster to dose ones who become eligible!
-    max_boost = [0;1;2;2][p.scenario+1]
-    age_boost = [0:0,5:17,50:100,18:100][p.scenario+1]
-    pos = findall(xx-> xx.age in age_boost && xx.vac_status == 2 && xx.n_boosted < max_boost && xx.days_vac >= p.booster_after[xx.vaccine_n] && !xx.tested && !(xx.health_status in aux_states),humans)
+    #max_boost = [0;1;2;2][p.scenario+1]
+    age_boost = [0:0,5:17,50:100,18:100,5:100][p.scenario+1]
+    pos = findall(xx-> xx.age in age_boost && xx.vac_status == 2 && xx.n_boosted < xx.max_boost && xx.days_vac >= p.booster_after[xx.vaccine_n] && !xx.tested && !(xx.health_status in aux_states),humans)
     l2 = length(pos)
     if l2 > 0
         for i in pos
@@ -1416,9 +1423,12 @@ function initialize()
         a = [4;19;49;64;79;999]
         g = findfirst(y->y>=x.age,a)
         x.ag_new = g
-        x.exp = 999  ## susceptible people don't expire.
+        x.exp = 9999  ## susceptible people don't expire.
         
         x.comorbidity = comorbidity(x.age)
+        if p.scenario > 0
+            x.max_boost = x.age >= 18 ? 2 : 1
+        end
         # initialize the next day counts (this is important in initialization since dyntrans runs first)
         get_nextday_counts(x)
         
@@ -1691,7 +1701,7 @@ function move_to_latent(x::Human)
     ## in calibration mode, latent people never become infectious.
     if p.calibration && !x.first_one
         x.swap = LAT 
-        x.exp = 999
+        x.exp = 9999
     end 
 end
 export move_to_latent
@@ -2118,7 +2128,7 @@ function move_to_dead(h::Human)
     h.swap = UNDEF
     h.swap_status = UNDEF
     h.tis = 0 
-    h.exp = 999 ## stay recovered indefinitely
+    h.exp = 9999 ## stay recovered indefinitely
     h.iso = true # a dead person is isolated
     _set_isolation(h, true)  # do not set the isovia property here.  
     # isolation property has no effect in contact dynamics anyways (unless x == SUS)
@@ -2135,7 +2145,7 @@ function move_to_recovered(h::Human)
     h.swap = UNDEF
     h.swap_status = UNDEF
     h.tis = 0 
-    h.exp = 999 ## stay recovered indefinitely
+    h.exp = 9999 ## stay recovered indefinitely
     h.iso = false ## a recovered person has ability to meet others
     h.recvac = 1
     
