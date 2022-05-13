@@ -179,7 +179,7 @@ end
 
 
     scenario::Int16 = 1
-    time_horizon::Int16 = 973
+    time_horizon::Int16 = 1003
     intervention_prob::Float16 = 0.8
 
     #one waning rate for each efficacy? For each strain? I can change this structure based on that
