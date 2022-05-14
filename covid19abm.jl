@@ -180,7 +180,8 @@ end
 
     scenario::Int16 = 1
     time_horizon::Int16 = 1003
-    intervention_prob::Float16 = 0.8
+    intervention_prob::Vector{Float16} = [0.8;0.8;0.8;0.8;0.8]
+    age_groups_vac::Vector{UnitRange{Int64}} = [5:11,12:17,18:49,50:64,65:100]
 
     #one waning rate for each efficacy? For each strain? I can change this structure based on that
 
@@ -657,11 +658,11 @@ function calc_rates(sim,time_horizon)
         indb2 = findall(x-> x.age in 18:100 && x.health_status != DED && x.vac_status == 2 && x.n_boosted == 1 && x.days_vac >= p.booster_after[x.vaccine_n], humans)
         indb = [indb1,indb2]
     elseif p.scenario == 4
-        ind1 = findall(x-> x.age in 5:100 && x.vac_status == 0 && x.health_status != DED, humans)
-        ind2 = findall(x-> x.age in 5:100 && x.vac_status == 1 && x.health_status != DED, humans)
-        indb1 = findall(x-> x.age in 5:100 && x.health_status != DED && x.vac_status == 2 && !x.boosted, humans)
+        ind1 = Int[]#findall(x-> x.age in 5:100 && x.vac_status == 0 && x.health_status != DED, humans)
+        ind2 = Int[]#findall(x-> x.age in 5:100 && x.vac_status == 1 && x.health_status != DED, humans)
+        indb1 = findall(x-> x.age in 5:100 && x.health_status != DED && x.vac_status == 2 && !x.boosted && x.days_vac >= p.booster_after[x.vaccine_n], humans)
         indb2 = findall(x-> x.age in 18:100 && x.health_status != DED && x.vac_status == 2 && x.n_boosted == 1 && x.days_vac >= p.booster_after[x.vaccine_n], humans)
-        indb = [indb1,indb2]
+        #indb = [indb1,indb2]
     elseif p.scenario == 0
         ind1 = []
         ind2 = []
@@ -676,33 +677,47 @@ function calc_rates(sim,time_horizon)
 
     if length(ind1) > 0
         
-        ind1 = get_sample(1,sim,ind1)
+        ind1 = map(y->get_sample(1,sim,ind1,y),1:length(p.age_groups_vac))
+        ind1 = vcat(ind1...)
     end
 
     if length(ind2) > 0
-        ind2 = get_sample(2,sim,ind2)
+        
+        ind2 = map(y->get_sample(2,sim,ind2,y),1:length(p.age_groups_vac))
+        ind2 = vcat(ind2...)
     end
 
     #we need to do this before sampling... to avoid vaccinating a lot of people at once
-    for ii in vcat(indb...)
+    for ii in vcat(indb1,indb2)
         humans[ii].tested = true
     end
 
-    if length(indb) > 0
-       indb = map(y->get_sample(3,sim,y),indb)
+    if length(indb1) > 0
+        indb1 = map(y->get_sample(3,sim,indb1,y),1:length(p.age_groups_vac))
     end
 
+
+    if length(indb2) > 0
+        indb2 = map(y->get_sample(4,sim,indb2,y),1:length(p.age_groups_vac))
+    end
+
+    indb = [vcat(indb1...),vcat(indb2...)]
     r1 = Int(ceil(length(ind1)/(time_horizon-p.vac_period[2])))
     r2 = Int(ceil(length(ind2)/(time_horizon)))
-    rb = Int(ceil(length(vcat(indb...))/(time_horizon)))
+    rb = Int(ceil(length(vcat(indb...))/time_horizon))
 
     return ind1,ind2,indb,r1,r2,rb
 end
 
-function get_sample(idx,sim,xv)
-    rng = MersenneTwister(192*sim*idx)
-    nn = Int(round(length(xv)*p.intervention_prob))
-    xs = sample(rng,xv,nn,replace=false)
+function get_sample(idx,sim,xv,ag)
+    rng = MersenneTwister(192*sim*idx*ag)
+    xpos = findall(y-> humans[y].age in p.age_groups_vac[ag],xv)
+    nn = Int(round(length(xv[xpos])*p.intervention_prob[ag]))
+    if nn > 0
+        xs = sample(rng,xv[xpos],nn,replace=false)
+    else
+        xs = Int[]
+    end
     return xs
 end
 
@@ -881,7 +896,8 @@ function vac_time_extra!(sim::Int64,st::Int64,ind1,ind2,indb,r1::Int64,r2::Int64
     if l2 > 0
         for i in pos
             x = humans[i]
-            if rand() < p.intervention_prob
+            agg = findfirst(x.age .∈ p.age_groups_vac)
+            if rand() < p.intervention_prob[agg]
                 x.days_vac = 0
                 x.index_day = 1
                 x.boosted = true
