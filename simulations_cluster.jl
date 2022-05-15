@@ -18,7 +18,7 @@ using DelimitedFiles
 
 #@everywhere using covid19abm
 
-addprocs(SlurmManager(500), N=16, topology=:master_worker, exeflags = "--project=.")
+addprocs(SlurmManager(250), N=16, topology=:master_worker, exeflags = "--project=.")
 @everywhere using Parameters, Distributions, StatsBase, StaticArrays, Random, Match, DataFrames
 @everywhere include("covid19abm.jl")
 @everywhere const cv=covid19abm

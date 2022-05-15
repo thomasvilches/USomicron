@@ -666,6 +666,8 @@ function calc_rates(sim,time_horizon)
     elseif p.scenario == 0
         ind1 = []
         ind2 = []
+        indb1 = Int[]
+        indb2 = Int[]
         indb = []
     elseif p.scenario == 999
         ind1 = []
