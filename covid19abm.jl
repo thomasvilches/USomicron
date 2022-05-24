@@ -663,6 +663,12 @@ function calc_rates(sim,time_horizon)
         indb1 = findall(x-> x.age in 5:100 && x.health_status != DED && x.vac_status == 2 && !x.boosted && x.days_vac >= p.booster_after[x.vaccine_n], humans)
         indb2 = findall(x-> x.age in 18:100 && x.health_status != DED && x.vac_status == 2 && x.n_boosted == 1 && x.days_vac >= p.booster_after[x.vaccine_n], humans)
         #indb = [indb1,indb2]
+    elseif p.scenario == 5
+        ind1 = Int[]#findall(x-> x.age in 5:100 && x.vac_status == 0 && x.health_status != DED, humans)
+        ind2 = Int[]#findall(x-> x.age in 5:100 && x.vac_status == 1 && x.health_status != DED, humans)
+        indb1 = findall(x-> x.age in 5:100 && x.health_status != DED && x.vac_status == 2 && !x.boosted && x.days_vac >= p.booster_after[x.vaccine_n], humans)
+        indb2 = findall(x-> x.age in 18:100 && x.health_status != DED && x.vac_status == 2 && x.n_boosted == 1 && x.days_vac >= p.booster_after[x.vaccine_n], humans)
+        #indb = [indb1,indb2]
     elseif p.scenario == 0
         ind1 = []
         ind2 = []
@@ -892,7 +898,7 @@ function vac_time_extra!(sim::Int64,st::Int64,ind1,ind2,indb,r1::Int64,r2::Int64
 
     ### Let's add booster to dose ones who become eligible!
     #max_boost = [0;1;2;2][p.scenario+1]
-    age_boost = [0:0,5:17,50:100,18:100,5:100][p.scenario+1]
+    age_boost = [0:0,5:17,50:100,18:100,5:100,5:100][p.scenario+1]
     pos = findall(xx-> xx.age in age_boost && xx.vac_status == 2 && xx.n_boosted < xx.max_boost && xx.days_vac >= p.booster_after[xx.vaccine_n] && !xx.tested && !(xx.health_status in aux_states),humans)
     l2 = length(pos)
     if l2 > 0
