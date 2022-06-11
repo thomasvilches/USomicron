@@ -8,13 +8,13 @@ run_param_scen_cal(true,0.121,"usa",30,1,1,1,1,1,0,1,rc,dc,[699;1003;-3;-4;-5;-7
 #vaccinate August, September and Octuber boosting
 run_param_scen_cal(true,0.121,"usa",30,1,1,1,1,1,4,2,rc,dc,[699;699;791;1003;-5;-7;-9],[0.6;0.5;0.38;0.54;0.75],true,425,70,0)
 
-# Double pulse in August-Oct, and Jan - March
-run_param_scen_cal(true,0.121,"usa",30,1,1,1,1,1,4,3,rc,dc,[699;699;791;852;941;1003],[0.6;0.5;0.38;0.54;0.75],true,425,70,0)
-
-
-
 #vaccinate August, September and Octuber boosting
 run_param_scen_cal(true,0.121,"usa",30,1,1,1,1,1,5,2,rc,dc,[699;699;791;1003;-5;-7;-9],[0.8;0.8;0.8;0.8;0.8],true,425,70,0)
+
+
+
+# Double pulse in August-Oct, and Jan - March
+run_param_scen_cal(true,0.121,"usa",30,1,1,1,1,1,4,3,rc,dc,[699;699;791;852;941;1003],[0.6;0.5;0.38;0.54;0.75],true,425,70,0)
 
 # Double pulse in August-Oct, and Jan - March
 run_param_scen_cal(true,0.121,"usa",30,1,1,1,1,1,5,3,rc,dc,[699;699;791;852;941;1003],[0.8;0.8;0.8;0.8;0.8],true,425,70,0)

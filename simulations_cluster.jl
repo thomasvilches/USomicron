@@ -126,8 +126,8 @@ function run(myp::cv.ModelParameters, nsims=1000, folderprefix="./")
     vac_j_4 = [cdr[i].n_jensen_4 for i=1:nsims]
     vac_j_w_4 = [cdr[i].n_jensen_w_4 for i=1:nsims]
 
-    remaining = [cdr[i].remaining for i=1:nsims]
-    total = [cdr[i].total_given for i=1:nsims]
+    nvacgiven = [cdr[i].nvacgiven for i=1:nsims]
+    n5plus = [cdr[i].n5plus for i=1:nsims]
 
 
 
@@ -135,6 +135,8 @@ function run(myp::cv.ModelParameters, nsims=1000, folderprefix="./")
     writedlm(string(folderprefix,"/vaccine_working.dat"),[vac_p_w vac_m_w vac_j_w vac_p_w_2 vac_m_w_2 vac_j_w_2 vac_p_w_3 vac_m_w_3 vac_j_w_3 vac_p_w_4 vac_m_w_4 vac_j_w_4])
 
     writedlm(string(folderprefix,"/year_of_death.dat"),hcat([cdr[i].vector_dead for i=1:nsims]...))
+    writedlm(string(folderprefix,"/nvac_given.dat"),[nvacgiven n5plus])
+
 
     writedlm(string(folderprefix,"/lat_vac_1.dat"),hcat([cdr[i].lat for i=1:nsims]...))
     writedlm(string(folderprefix,"/lat_vac_2.dat"),hcat([cdr[i].lat2 for i=1:nsims]...))

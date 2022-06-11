@@ -217,7 +217,7 @@ export ModelParameters, HEALTH, Human, humans, BETAS
 
 function runsim(simnum, ip::ModelParameters)
     # function runs the `main` function, and collects the data as dataframes. 
-    hmatrix, remaining_doses, total_given, lat,hos, icu, ded,lat2, hos2, icu2, ded2,lat3, hos3, icu3, ded3, lat4, hos4, icu4, ded4, lat5, hos5, icu5, ded5, lat6, hos6, icu6, ded6, lat7, hos7, icu7, ded7, lat8, hos8, icu8, ded8  = main(ip,simnum)            
+    hmatrix, remaining_doses, total_given, nvacgiven, lat,hos, icu, ded,lat2, hos2, icu2, ded2,lat3, hos3, icu3, ded3, lat4, hos4, icu4, ded4, lat5, hos5, icu5, ded5, lat6, hos6, icu6, ded6, lat7, hos7, icu7, ded7, lat8, hos8, icu8, ded8  = main(ip,simnum)            
 
     # use here to create the vector of comorbidity
     # get simulation age groups
@@ -321,6 +321,10 @@ function runsim(simnum, ip::ModelParameters)
         vector_ded[(x.age+1)] += 1
     end
 
+
+    ## Checking the size of the population eligible to vaccination considering 5+
+    n5plus = count(x-> x.age >= 5, humans)
+
     return (lat=lat, hos=hos, icu=icu, ded=ded, lat2=lat2, hos2=hos2, icu2=icu2, ded2=ded2, lat3=lat3, hos3=hos3, icu3=icu3, ded3=ded3, lat4=lat4, hos4=hos4, icu4=icu4, ded4=ded4, lat5=lat5, hos5=hos5, icu5=icu5, ded5=ded5, lat6=lat6, hos6=hos6, icu6=icu6, ded6=ded6, lat7=lat7, hos7=hos7, icu7=icu7, ded7=ded7, lat8=lat8, hos8=hos8, icu8=icu8, ded8=ded8,
     a=all, g1=ag1, g2=ag2, g3=ag3, g4=ag4, g5=ag5,g6=ag6,g7=ag7,g8=ag8,g9=ag9, work = work,
     cov1 = coverage1,cov2 = coverage2,cov12 = coverage12,cov22 = coverage22,vector_dead=vector_ded,
@@ -328,7 +332,7 @@ function runsim(simnum, ip::ModelParameters)
     n_pfizer_2 = n_pfizer_2, n_moderna_2 = n_moderna_2, n_jensen_2 = n_jensen_2, n_pfizer_w_2 = n_pfizer_w_2, n_moderna_w_2 = n_moderna_w_2, n_jensen_w_2 = n_jensen_w_2, 
     n_pfizer_3 = n_pfizer_3, n_moderna_3 = n_moderna_3, n_jensen_3 = n_jensen_3, n_pfizer_w_3 = n_pfizer_w_3, n_moderna_w_3 = n_moderna_w_3, n_jensen_w_3 = n_jensen_w_3, 
     n_pfizer_4 = n_pfizer_4, n_moderna_4 = n_moderna_4, n_jensen_4 = n_jensen_4, n_pfizer_w_4 = n_pfizer_w_4, n_moderna_w_4 = n_moderna_w_4, n_jensen_w_4 = n_jensen_w_4, 
-    remaining = remaining_doses, total_given = total_given)
+    remaining = remaining_doses, total_given = total_given, nvacgiven = nvacgiven, n5plus = n5plus)
 end
 export runsim
 
@@ -375,6 +379,9 @@ function main(ip::ModelParameters,sim::Int64)
     remaining_doses::Int64 = 0
     total_given::Int64 = 0
     count_relax::Int64 = 1
+
+    nvacgiven::Int64  = 0 #counting the number of vaccines that are given when
+    #vaccinating the campaign
 
     #these vectors will record incidence by vaccination status
     #one dose, two doses, boosted, unvac recovered, unvac non recovered
@@ -528,8 +535,9 @@ function main(ip::ModelParameters,sim::Int64)
 
         ## change it here!!! this is the important part
         
-        p.scenario > 0 && vac_time_extra!(sim,st,ind1,ind2,indb,r1,r2,rb)
-       
+        if p.scenario > 0    
+            nvacgiven += vac_time_extra!(sim,st,ind1,ind2,indb,r1,r2,rb)
+        end
         _get_model_state(st, hmatrix) ## this datacollection needs to be at the start of the for loop
         dyntrans(st, grps,sim)
     
@@ -575,8 +583,9 @@ function main(ip::ModelParameters,sim::Int64)
 
         ## change it here!!! this is the important part
         
-        p.scenario > 0 && vac_time_extra!(sim,st,ind1,ind2,indb,r1,r2,rb)
-       
+        if p.scenario > 0
+            nvacgiven += vac_time_extra!(sim,st,ind1,ind2,indb,r1,r2,rb)
+        end
         _get_model_state(st, hmatrix) ## this datacollection needs to be at the start of the for loop
         dyntrans(st, grps,sim)
     
@@ -606,7 +615,7 @@ function main(ip::ModelParameters,sim::Int64)
         # end of day
     end
 
-    return hmatrix, remaining_doses, total_given, lat,hos, icu, ded,lat2, hos2, icu2, ded2,lat3, hos3, icu3, ded3, lat4, hos4, icu4, ded4, lat5, hos5, icu5, ded5, lat6, hos6, icu6, ded6, lat7, hos7, icu7, ded7, lat8, hos8, icu8, ded8 ## return the model state as well as the age groups. 
+    return hmatrix, remaining_doses, total_given, nvacgiven, lat,hos, icu, ded,lat2, hos2, icu2, ded2,lat3, hos3, icu3, ded3, lat4, hos4, icu4, ded4, lat5, hos5, icu5, ded5, lat6, hos6, icu6, ded6, lat7, hos7, icu7, ded7, lat8, hos8, icu8, ded8 ## return the model state as well as the age groups. 
 end
 export main
 
@@ -732,6 +741,7 @@ end
 
 function vac_time_extra!(sim::Int64,st::Int64,ind1,ind2,indb,r1::Int64,r2::Int64,rb::Int64)
     aux_states = (MILD, MISO, INF, IISO, HOS, ICU, DED)
+    nvacgiven::Int64  = 0
     ##first dose
     rng = MersenneTwister(146*sim*st)
     ### lets create distribute the number of doses per age group
@@ -859,6 +869,7 @@ function vac_time_extra!(sim::Int64,st::Int64,ind1,ind2,indb,r1::Int64,r2::Int64
     if l2 > 0
         pos = sample(rng,pos,l2,replace=false)
         for i in pos
+            nvacgiven += 1
             x = humans[i]
             x.days_vac = 0
             x.index_day = 1
@@ -906,6 +917,7 @@ function vac_time_extra!(sim::Int64,st::Int64,ind1,ind2,indb,r1::Int64,r2::Int64
             x = humans[i]
             agg = findfirst(x.age .∈ p.age_groups_vac)
             if rand() < p.intervention_prob[agg]
+                nvacgiven += 1
                 x.days_vac = 0
                 x.index_day = 1
                 x.boosted = true
@@ -943,6 +955,7 @@ function vac_time_extra!(sim::Int64,st::Int64,ind1,ind2,indb,r1::Int64,r2::Int64
             end
         end
     end
+    return nvacgiven
 end
 
 function vac_time!(sim::Int64,vac_ind::Vector{Vector{Int64}},time_pos::Int64,vac_rate_1::Matrix{Int64},vac_rate_2::Matrix{Int64},vac_rate_booster::Vector{Int64})
