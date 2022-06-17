@@ -170,7 +170,7 @@ end
 function create_folder(ip::cv.ModelParameters,province="newyorkcity",calibrating = true)
     
     #RF = string("heatmap/results_prob_","$(replace(string(ip.β), "." => "_"))","_vac_","$(replace(string(ip.vaccine_ef), "." => "_"))","_herd_immu_","$(ip.herd)","_$strategy","cov_$(replace(string(ip.cov_val)))") ## 
-    main_folder = "/data/thomas-covid/USomicron"
+    main_folder = "/data/thomas-covid/extra_coverage"
     #main_folder = "."
     if calibrating
         RF = string(main_folder,"/results_prob_","$(replace(string(ip.β), "." => "_"))","_$(ip.file_index)_$(province)") ##  
@@ -185,7 +185,7 @@ end
 
 
 
-function run_param_scen_cal(calibrating::Bool,b::Float64,province::String="usa",ic1::Int64=1,ic2::Int64=1,ic3::Int64=1,ic4::Int64=1,ic5::Int64=1,ic6::Int64=1,index::Int64 = 0,rc=[0.0],dc=[0],mt::Int64=500,vac::Bool=true,tbn::Int64 = 999,ro::Int64 = 1,dr::Int64=0,hospar::Float64 = 3.1,nsims::Int64=500)
+function run_param_scen_cal(calibrating::Bool,b::Float64,province::String="usa",ic1::Int64=1,ic2::Int64=1,ic3::Int64=1,ic4::Int64=1,ic5::Int64=1,ic6::Int64=1,index::Int64 = 0,rc=[0.0],dc=[0],mt::Int64=500,vac::Bool=true,tbn::Int64 = 999,ro::Int64 = 1,dr::Int64=0,alpha::Float64 = 1.0, scenn::String = "statuscuo",hospar::Float64 = 3.1,nsims::Int64=500)
     
     
     #b = bd[h_i]
@@ -194,6 +194,7 @@ function run_param_scen_cal(calibrating::Bool,b::Float64,province::String="usa",
     start_several_inf=true,initialinf3=$ic3,initialinf6=$ic6,initialinf=$ic1,initialinf2=$ic2,initialinf5=$ic5,initialinf4=$ic4,
     status_relax = 2, relax_after = 14,file_index = $index,
     modeltime=$mt, prov = Symbol($province),
+    scenario = Symbol($scenn), α = $alpha,
     time_change_contact = $dc,
     change_rate_values = $rc,time_back_to_normal = $tbn,relax_over = $ro, reduce_days = $dr,
     hosp_red = $hospar)
