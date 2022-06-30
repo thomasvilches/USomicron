@@ -120,8 +120,8 @@ end
 
     mortality_inc::Float64 = 1.3 #The mortality increase when infected by strain 2
 
-    vaccine_proportion::Vector{Float64} = [0.59;0.33;0.08]
-    vaccine_proportion_2::Vector{Float64} = [0.63;0.37;0.0]
+    vaccine_proportion::Vector{Float64} = [0.561;0.369;0.0]
+    vaccine_proportion_2::Vector{Float64} = [0.561;0.369;0.0]
     vac_period::Array{Int64,1} = [21;28;999]
     n_boosts::Int64 = 1
     min_age_booster::Int64 = 16
@@ -536,8 +536,11 @@ function vac_time!(sim::Int64,vac_ind::Vector{Vector{Int64}},time_pos::Int64,vac
     doses_first::Vector{Int64} = Int.(round.(sum(vac_rate_1[time_pos,:])*(p.vaccine_proportion/sum(p.vaccine_proportion))))
     doses_second::Vector{Int64} = Int.(round.(sum(vac_rate_2[time_pos,:])*(p.vaccine_proportion_2/sum(p.vaccine_proportion_2))))
 
+    doses_first[3] > 0 && error("first - $(p.vaccine_proportion) $doses_first")
+    doses_second[3] > 0 && error("first - $(p.vaccine_proportion2) $doses_second")
+
     if sum(doses_first) < sum(vac_rate_1[time_pos,:])
-        r = rand(1:3)
+        r = sample([1,2,3], Weights(p.vaccine_proportion/sum(p.vaccine_proportion)))
         doses_first[r] += 1
     elseif sum(doses_first) > sum(vac_rate_1[time_pos,:])
         rr=findall(y-> y>0,doses_first)
@@ -626,6 +629,7 @@ function vac_time!(sim::Int64,vac_ind::Vector{Vector{Int64}},time_pos::Int64,vac
                 x.vac_status = 1
                 x.index_day = 1
                 x.vaccine_n = x.age < 18 ? 1 : sample([1,2,3], Weights(doses_first/sum(doses_first)))
+                #x.vaccine_n == 3 && error("Erro aqui -- sample $(p.vaccine_proportion) $doses_first")
                 x.vaccine = [:pfizer;:moderna;:jensen][x.vaccine_n]
                 doses_first[x.vaccine_n] -= 1
                 remaining_doses -= 1
@@ -678,6 +682,7 @@ function vac_time!(sim::Int64,vac_ind::Vector{Vector{Int64}},time_pos::Int64,vac
         else
             pos = map(k->findall(y-> humans[y].vac_status == 1 && humans[y].vaccine_n == vac && humans[y].days_vac >= p.vac_period[humans[y].vaccine_n] && !(humans[y].health_status in aux_states),vac_ind[k]),1:length(vac_ind))
             pos2 = map(k->findall(y-> humans[y].vac_status == 0 && humans[y].age >= 18 && !(humans[y].health_status in aux_states),vac_ind[k]),1:length(vac_ind))
+            error("testing -  the error is here")
         end
 
         aux = findall(x-> vac_rate_1[time_pos,x] > 0 || vac_rate_2[time_pos,x] > 0, 1:length(vac_ind))
