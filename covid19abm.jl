@@ -188,6 +188,7 @@ end
     waning::Int64 = 1
     reduce_days::Int64 = 0
     modeltime::Vector{Int64} = [973;-1;-3;-5;-7;-9]
+    day_count_booster::Int64 = 699
     ### after calibration, how much do we want to increase the contact rate... in this case, to reach 70%
     ### 0.5*0.95 = 0.475, so we want to multiply this by 1.473684211
 end
@@ -490,6 +491,9 @@ function main(ip::ModelParameters,sim::Int64)
                 aux_ =  vac_time!(sim,vac_ind,time_pos+1,vac_rate_1,vac_rate_2,vac_rate_booster)
                 remaining_doses += aux_[1]
                 total_given += aux_[2]
+                if st >= p.day_count_booster
+                    nvacgiven += aux_[3]
+                end 
             end
 
             _get_model_state(st, hmatrix) ## this datacollection needs to be at the start of the for loop
@@ -966,7 +970,7 @@ function vac_time!(sim::Int64,vac_ind::Vector{Vector{Int64}},time_pos::Int64,vac
     
     remaining_doses::Int64 = 0
     total_given::Int64 = 0
-
+    nvacgiven::Int64 = 0
     #print(p.vaccine_proportion)
     ### Let's calculate the number of available doses per vaccine type
     doses_first::Vector{Int64} = Int.(round.(sum(vac_rate_1[time_pos,:])*(p.vaccine_proportion/sum(p.vaccine_proportion))))
@@ -1014,6 +1018,7 @@ function vac_time!(sim::Int64,vac_ind::Vector{Vector{Int64}},time_pos::Int64,vac
                 x.vac_status = 2
                 x.index_day = 1
                 total_given += 1
+                nvacgiven += 1
                 doses_second[x.vaccine_n] -= 1
                 remaining_doses -= 1
 
@@ -1066,6 +1071,7 @@ function vac_time!(sim::Int64,vac_ind::Vector{Vector{Int64}},time_pos::Int64,vac
                 doses_first[x.vaccine_n] -= 1
                 remaining_doses -= 1
                 total_given += 1
+                nvacgiven += 1
 
                 x.vac_eff_inf = deepcopy(p.vac_efficacy_inf[x.vaccine_n])
                 x.vac_eff_symp = deepcopy(p.vac_efficacy_symp[x.vaccine_n])
@@ -1133,6 +1139,7 @@ function vac_time!(sim::Int64,vac_ind::Vector{Vector{Int64}},time_pos::Int64,vac
             x.vaccine = [:pfizer;:moderna;:jensen][x.vaccine_n]
             remaining_doses -= 1
             total_given += 1
+            nvacgiven += 1
             x.vac_eff_inf = deepcopy(p.vac_efficacy_inf[x.vaccine_n])
             x.vac_eff_symp = deepcopy(p.vac_efficacy_symp[x.vaccine_n])
             x.vac_eff_sev = deepcopy(p.vac_efficacy_sev[x.vaccine_n])
@@ -1161,6 +1168,7 @@ function vac_time!(sim::Int64,vac_ind::Vector{Vector{Int64}},time_pos::Int64,vac
             x.index_day = 1
             remaining_doses -= 1
             total_given += 1
+            nvacgiven += 1
 
             if x.recovered
                 index = Int(floor(x.days_recovered/7))
@@ -1201,6 +1209,7 @@ function vac_time!(sim::Int64,vac_ind::Vector{Vector{Int64}},time_pos::Int64,vac
         x.index_day = 1
         x.boosted = true
         x.n_boosted += 1
+        nvacgiven += 1
         #### ADD here the new vaccine efficacy against Omicron for booster
             
         x.vac_eff_inf[6][2][end] = [0.76;0.677][x.vaccine_n]
@@ -1230,7 +1239,7 @@ function vac_time!(sim::Int64,vac_ind::Vector{Vector{Int64}},time_pos::Int64,vac
         end
     end
 
-    return remaining_doses,total_given
+    return remaining_doses,total_given, nvacgiven
 
 end
 

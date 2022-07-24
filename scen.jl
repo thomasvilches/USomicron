@@ -5,6 +5,9 @@ rc = [0.935;map(y->0.935-(0.07/12)*y,1:12);map(y->0.865-(0.12/22)*y,1:22);map(y-
 # vaccinate up to July 31st in the current pace
 run_param_scen_cal(true,0.121,"usa",30,1,1,1,1,1,0,1,rc,dc,[699;1003;-3;-4;-5;-7;-9],[0.0;0.0;0.0;0.0;0.0],true,425,70,0)
 
+# vaccinate up to the end in the current pace
+run_param_scen_cal(true,0.121,"usa",30,1,1,1,1,1,0,4,rc,dc,[1003;-1;-3;-4;-5;-7;-9],[0.0;0.0;0.0;0.0;0.0],true,425,70,0)
+
 #vaccinate August, September and Octuber boosting
 run_param_scen_cal(true,0.121,"usa",30,1,1,1,1,1,4,2,rc,dc,[699;699;791;1003;-5;-7;-9],[0.6;0.5;0.38;0.54;0.75],true,425,70,0)
 
