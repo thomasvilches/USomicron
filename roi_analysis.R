@@ -1,4 +1,4 @@
-setwd("~/PosDoc/Coronavirus/USomicron/Code/")
+setwd("D:\\PosDoc\\Coronavirus\\USomicron\\USomicron")
 library(dplyr)
 library(xlsx)
 library(readxl)
@@ -12,6 +12,8 @@ library(ggbeeswarm)    ## beeswarm plots
 library(gghalves)      ## off-set jitter
 library(systemfonts)   ## custom fonts
 library(latex2exp)
+library(zoo)
+library(data.table)
 # Parameters -------------------------------------------------------------------
 set.seed(1432)
 #Total cost of vaccine clinic setup 
@@ -31,8 +33,11 @@ vaccines_cost = 282663374.8 #282,663,374.8
 
 
 #Indirect costs
-pcpi_nyc = 74472 ## Per-capita personal income NYC
-perc_vac_emp = 0.7176 ## proportion of vaccinated people that is employed (18-64 yo)
+pcpi_nyc = 69288 ## Per-capita personal income NYC
+# https://tradingeconomics.com/united-states/employment-rate#:~:text=Employment%20Rate%20in%20the%20United%20States%20averaged%2059.22%20percent%20from,percent%20in%20April%20of%202020.
+perc_vac_emp = 0.665 ## proportion of vaccinated people who is employed (18-64 yo)
+
+
 wdl_vac = 0.5 #work days lost due to visit for vaccination
 pm_adverse_1 = 0.517 #proportion of adverse reaction First dose Moderna
 pm_adverse_2 = 0.748 #proportion of adverse reaction First dose Moderna
@@ -114,84 +119,40 @@ idx_2 = 2
   
 # Vaccination costs (direct) ----------------------------------------------
 
-# This is using the data about expenses provided by NYC
-direct_vaccination_cost = cost_setup+cost_administration+cost_advertisement+
-  cost_storage_and_transport+expenses_benefits+vaccines_cost
-
 # Vaccination costs (indirect) -------------------------------------------------------
 # calculate the loss of workdays to go to get vaccine from 15-64 y.o.
 ## Let's read the data that was provided
-data_vac = read_excel("data/NYC_Daily_COVID-19_Vax_by_UHF_AgeGroup_2022-02-08_1500.xlsx")
+data_vac = read.table("../data/results_prob_0_106_herd_immu_10_1_usa/vaccine_working.dat", h=F)
 head(data_vac)
 tail(data_vac)
 
-#data_vac %>% mutate(DATE = as.Date(DATE)) %>% ggplot()+geom_line(aes(x = DATE,y = N_FULLY_VACCINATED,color = AGE_GROUP))
-
-#clean the number 999
-data_vac = data_vac[data_vac$UHF != 999,]
-### let's take the sum of facilities
-data = data_vac %>% group_by(AGE_GROUP) %>% summarise(partially = sum(N_PARTIALLY_VACCINATED), fully = sum(N_FULLY_VACCINATED))
-data
-# The age groups are not exactly what we need, but let's use it anyway. 
-# This is conservative (overestimates the vaccination cost)
-
-# We want to calculate the number of working days that were spent due to vaccination
-
-working_group = c("15to24","25to44","45to64")
-n_vacs_first = sum(data$partially[data$AGE_GROUP %in% working_group])
-n_vacs_second = sum(data$fully[data$AGE_GROUP %in% working_group])
-# We need to do the same for booster dose
-
-data_booster = read.csv("data/Demo_additional_dose_age_2022-02-08_1500.csv",sep = ";")
-head(data_booster)
-tail(data_booster)
-
-data_booster$DATE = as.Date(data_booster$DATE)
-
-data_booster_total = data_booster %>% filter(DATE >= as.Date("2020-12-14"), RESIDENCY == "NYC") %>%
-  group_by(AGE_GROUP) %>% summarise(total_b = sum(N_ADDITIONAL_VACCINATED))
-
-data_booster_total
-
-working_group = c("18to24","25to34","35to44","45to54","55to64")
-n_vacs_booster = sum(data_booster_total$total_b[data_booster_total$AGE_GROUP %in% working_group])
-n_days_vac = (n_vacs_first+n_vacs_second+n_vacs_booster)*wdl_vac*perc_vac_emp
+n_days_vac = rowSums(data_vac)
+n_days_vac = n_days_vac*wdl_vac*perc_vac_emp
 
 # Now, for adverse reaction, we need to calculate the proportion
 # of each vaccine that was administered
 
 #Let's read the data
 
-data = read.csv("data/Dose_admin_bymonth_2022-02-08_1500.csv",sep = ";")
+data = read.table("../data/results_prob_0_106_herd_immu_10_1_usa/vaccine_working.dat", h=F)
 
 # we need to add Janssen to second dose, to be able to use it for fully vaccinated
 # in the next section
-df = data %>% group_by(VAC_CODE) %>% 
-  summarise(total = sum(ALL_DOSES),
-            first = sum(ADMIN_DOSE1),
-            second  = sum(ADMIN_DOSE2)+sum(ADMIN_SINGLE), booster = sum(ADMIN_ADDITIONAL))
 
-# The total number is in df
-vaccines = c("Janssen","Moderna","Pfizer")
-pp = df %>% filter(VAC_CODE %in% vaccines)
-
-first = pp$first/sum(pp$first)
-second = pp$second/sum(pp$second)
-boost = pp$booster/sum(pp$booster)
 
 # number of working days lost due to vaccination
-n_days_ad_jensen = (n_vacs_second*second[1]*wdl_adverse_1+n_vacs_booster*boost[1]*wdl_adverse_2)*pjj_adverse*perc_vac_emp
+n_days_ad_jensen = (data[,3]*wdl_adverse_1)*pjj_adverse*perc_vac_emp
 n_days_ad_moderna = 
-  (n_vacs_second*second[2]+n_vacs_booster*boost[2])*wdl_adverse_2*pm_adverse_2*perc_vac_emp+
-  n_vacs_first*first[2]*wdl_adverse_1*pm_adverse_1*perc_vac_emp
+  (data[,5]+data[,8])*wdl_adverse_2*pm_adverse_2*perc_vac_emp+
+  data[,2]*wdl_adverse_1*pm_adverse_1*perc_vac_emp
 n_days_ad_pfizer = 
-  (n_vacs_second*second[3]+n_vacs_booster*boost[3])*wdl_adverse_2*pp_adverse_2*perc_vac_emp+
-  n_vacs_first*first[3]*wdl_adverse_1*pp_adverse_1*perc_vac_emp
+  (data[,4]+data[,7])*wdl_adverse_2*pp_adverse_2*perc_vac_emp+
+  data[,1]*wdl_adverse_1*pp_adverse_1*perc_vac_emp
 
 # total
 n_days_work_lost = n_days_vac+n_days_ad_pfizer+n_days_ad_jensen+n_days_ad_moderna
 
-indirect_vaccination_cost = n_days_work_lost*pcpi_nyc/365
+indirect_vaccination_cost = n_days_work_lost*pcpi_nyc/365*population/100000
 
 # COVID-19 costs ----------------------------------------------------------
 
@@ -200,6 +161,7 @@ indirect_vaccination_cost = n_days_work_lost*pcpi_nyc/365
 
 data.cases = read.csv("../data/data_us_april.csv")
 
+LHS_tab = read.csv("../data/LHSmatrix.csv")
 
 # Illness and Hospitalization (direct) ---------------------------------------------------------
 
@@ -268,13 +230,17 @@ sum.sim.icu = sum.sim.icu*factor_hos
 
 
 #cost mild infection of hospital
-cost_symp = (sum.sim.mild)*
-  n_outpatient_visits*(cost_outpatient_appointment)
+set.seed(1432)
+cost_symp = (boot::boot(sum.sim.mild,fc,1000)$t[,1])*
+  n_outpatient_visits*LHS_tab$Outpatient
 #cost severe non-hospitalized infection
-cost_inf = (sum.sim.inf)*cost_ED_care
+set.seed(1432)
+cost_inf = (boot::boot(sum.sim.inf,fc,1000)$t[,1])*LHS_tab$ED.care
 #cost for hospitalizations
-cost_hos = (sum.sim.hos)*(cost_hosp_nICU+n_EMS_calls*cost_transp_EMS)
-cost_icu = (sum.sim.icu)*(cost_hosp_ICU+n_EMS_calls*cost_transp_EMS)
+set.seed(1432)
+cost_hos = (boot::boot(sum.sim.hos,fc,1000)$t[,1])*(LHS_tab$Hospitalization.without.ICU+n_EMS_calls*LHS_tab$EMS.transportation)
+set.seed(1432)
+cost_icu = (boot::boot(sum.sim.icu,fc,1000)$t[,1])*(LHS_tab$Hospitalization.with.ICU+n_EMS_calls*LHS_tab$EMS.transportation)
 
 cost_hospital = (cost_symp+cost_inf+cost_hos+cost_icu)*population/100000
 #cost_hospital
@@ -336,30 +302,22 @@ sum.sim.hos2 = sum.sim.hos2*factor_hos
 sum.sim.icu2 = sum.sim.icu2*factor_hos
 
 #cost mild infection of hospital
-cost_symp = (sum.sim.mild2)*
-     n_outpatient_visits*(cost_outpatient_appointment)
+set.seed(1432)
+cost_symp = (boot::boot(sum.sim.mild2,fc,1000)$t[,1])*
+  n_outpatient_visits*LHS_tab$Outpatient
 #cost severe non-hospitalized infection
-cost_inf = (sum.sim.inf2)*cost_ED_care
+set.seed(1432)
+cost_inf = (boot::boot(sum.sim.inf2,fc,1000)$t[,1])*LHS_tab$ED.care
 #cost for hospitalizations
-cost_hos = (sum.sim.hos2)*(cost_hosp_nICU+n_EMS_calls*cost_transp_EMS)
-cost_icu = (sum.sim.icu2)*(cost_hosp_ICU+n_EMS_calls*cost_transp_EMS)
+set.seed(1432)
+cost_hos = (boot::boot(sum.sim.hos2,fc,1000)$t[,1])*(LHS_tab$Hospitalization.without.ICU+n_EMS_calls*LHS_tab$EMS.transportation)
+set.seed(1432)
+cost_icu = (boot::boot(sum.sim.icu2,fc,1000)$t[,1])*(LHS_tab$Hospitalization.with.ICU+n_EMS_calls*LHS_tab$EMS.transportation)
 
 cost_hospital2 = (cost_symp+cost_inf+cost_hos+cost_icu)*population/100000
 #cost_hospital2
 
 
-bb = boot::boot(cost_hospital,fc,R=500)
-mean(bb$t[,1])
-boot::boot.ci(bb,0.95)$bca
-
-bb = boot::boot(cost_hospital2,fc,R=500)
-mean(bb$t[,1])
-boot::boot.ci(bb,0.95)$bca
-
-aa = cost_hospital2-cost_hospital
-bb = boot::boot(aa,fc,R=500)
-mean(bb$t[,1])
-boot::boot.ci(bb,0.95)$bca
 
 # Illness and Hospitalization (indirect) ---------------------------------------------------------
 # 
@@ -425,632 +383,28 @@ total2_hos = Reduce("+",total_days_2)[,1]
 cost_indirect_ill1 = total1_hos*perc_vac_emp*pcpi_nyc/365*population/100000
 cost_indirect_ill2 = total2_hos*perc_vac_emp*pcpi_nyc/365*population/100000
 
-
-# Years of Life Lost ------------------------------------------------------
-#fist of all, let's find the scaling factor for deaths.
-
-deaths = read_file_incidence(idx_1,"ded")
-ded = Reduce('+', deaths)
-nn = nrow(ded)
-v_date = basedate+seq(0,nn-1) #creating a vector with the dates of simulation
-sum.sim.ded = sum(ded[v_date >= basedate_vac & v_date <= enddate,])/ncol(ded)
-total_deaths = data.cases %>% filter(date_of_interest >= basedate_vac,date_of_interest <= enddate) %>% pull(inc_deaths) %>% sum()/population*100000
-total_deaths
-factor_deaths = total_deaths/sum.sim.ded
-
-# Let's read the file containing the amount of people that died at age x in each sim
-
-age_of_death= read.table("data/results_prob_0_121_1_newyorkcity/year_of_death.dat",h=F)
-dim(age_of_death)
-
-life_exp = read.csv("data/life_exp.csv",sep = ";",h=F)$V2[1:nrow(age_of_death)]
-
-
-vector_cost = unlist(lapply(life_exp,formula))
-#plot(vector_cost)
-
-vyll = as.vector(vector_cost %*% as.matrix(age_of_death))
-
-vyll1 = vyll*factor_deaths*population/100000#boot::boot(vyll*factor_deaths*population/100000,fc,500)
-
-age_of_death= read.table("data/results_prob_0_121_2_newyorkcity/year_of_death.dat",h=F)
-dim(age_of_death)
-
-vyll = as.vector(vector_cost %*% as.matrix(age_of_death))
-
-vyll2 = vyll*factor_deaths*population/100000#boot::boot(vyll*factor_deaths*population/100000,fc,500)
-
-
-cost_yll1 = vyll1#(vyll1$t[,1])
-cost_yll2 = vyll2#(vyll2$t[,1])
-
-#mean(vyll1$t)
-#boot::boot.ci(vyll1)
-
-#mean(vyll2$t)
-#boot::boot.ci(vyll2)
-
-
-# YLL ---------------------------------------------------------------------
-
-
-age_of_death= read.table("data/results_prob_0_121_1_newyorkcity/year_of_death.dat",h=F)
-dim(age_of_death)
-
-#plot(vector_cost)
-
-vyll = as.vector(life_exp %*% as.matrix(age_of_death))
-
-vyll1 = boot::boot(vyll*factor_deaths*population/100000,fc,500)
-mean(vyll1$t)
-boot::boot.ci(vyll1)
-
-n_people1 = colSums(age_of_death)
-average_yll1 = vyll/n_people1
-
-quantile(average_yll1,c(0.025,0.975,0.5),na.rm = T)
-
-age_of_death= read.table("data/results_prob_0_121_2_newyorkcity/year_of_death.dat",h=F)
-dim(age_of_death)
-n_people2 = colSums(age_of_death)
-#plot(vector_cost)
-
-vyll = as.vector(life_exp %*% as.matrix(age_of_death))
-
-vyll2 = boot::boot(vyll*factor_deaths*population/100000,fc,500)
-mean(vyll2$t)
-boot::boot.ci(vyll2)
-
-
-df = data.frame(value=c(vyll1$t[,1],vyll2$t[,1]),scen = c(rep("vac",length(vyll1$t[,1])),rep("novac",length(vyll2$t[,1]))))
-
-kruskal.test(value~scen, data = df)
-
-np1 = boot::boot(n_people1*factor_deaths*population/100000,fc,500)$t[,1]
-np2 = boot::boot(n_people2*factor_deaths*population/100000,fc,500)$t[,1]
-
-
-cc = (cost_yll2-cost_yll1)/(np2-np1)
-mean(cc)
-quantile(cc,c(0.025,0.975,0.5),na.rm=T)
 # Results -----------------------------------------------------------------
-
-#Initial Value Investment
-IVI = direct_vaccination_cost
-bb_vac = boot::boot(cost_hospital+cost_indirect_ill1+cost_yll1,fc,R=500)$t[,1]
-total_cost_vaccination = indirect_vaccination_cost+bb_vac
-total_cost_no_vac = boot::boot(cost_hospital2+cost_indirect_ill2+cost_yll2,fc,R=500)$t[,1]
-
-# Final value of investment
-FVI = total_cost_no_vac - total_cost_vaccination
-ROI = (FVI - IVI)/IVI
-
-#Initial Value Investment
-IVI_society = direct_vaccination_cost+indirect_vaccination_cost
-total_cost_vaccination_society = bb_vac
-total_cost_no_vac_society = total_cost_no_vac
-
-# Final value of investment
-FVI_society = total_cost_no_vac_society - total_cost_vaccination_society
-ROI_society = (FVI_society - IVI_society)/IVI_society
-
-df = data.frame(cost = c(total_cost_vaccination,total_cost_no_vac),
-                scen= c(rep("Vaccination",length(total_cost_vaccination)),rep("No Vaccination",length(total_cost_no_vac))))
-
-df %>% group_by(scen) %>% summarise(m = mean(cost),ci1 = quantile(cost,0.025,name=F),ci2 = quantile(cost,0.975,name=F)) %>%
-  mutate(m=format(m,big.mark=","),ci1=format(ci1,big.mark=","),ci2=format(ci2,big.mark=","))
-
-
 
 pal_plots = c("#885687","#9ebcda","#756bb1","#bcbddc")
 
 
-# FVI-IVI -----------------------------------------------------------------
-
+# Direct -----------------------------------------------------------------
+set.seed(1432)
+ind_vac = boot::boot(indirect_vaccination_cost,fc,1000)$t[,1]
 
 #Initial Value Investment
-IVI = direct_vaccination_cost
-bb_vac = cost_hospital+cost_indirect_ill1+cost_yll1
-total_cost_vaccination = indirect_vaccination_cost+bb_vac
-total_cost_no_vac = cost_hospital2+cost_indirect_ill2+cost_yll2
+
+bb_vac = cost_hospital#+cost_indirect_ill1
+total_cost_vaccination = bb_vac#+indirect_vaccination_cost
+total_cost_no_vac = cost_hospital2#+cost_indirect_ill2
 
 ###
-xx = total_cost_no_vac-bb_vac
 
 # Final value of investment
 FVI = total_cost_no_vac - total_cost_vaccination
-xx = FVI - IVI
-bb = boot::boot(xx,fc,R=500)
-mean(bb$t[,1])
-bbb=boot::boot.ci(bb,0.95)
-bbb$bca
-# Better plot -------------------------------------------------------------
-
-factor_cost = total_cost_no_vac/total_cost_vaccination
-
-total_cost_no_vac2 = total_cost_no_vac
-total_cost_vaccination2 = total_cost_vaccination*4 #this is for plot
-
-df_plot = data.frame(cost = c(total_cost_vaccination2,total_cost_no_vac2),
-                scen= c(rep("Vaccination",length(total_cost_vaccination2)),rep("No Vaccination",length(total_cost_no_vac2))))
-# 
-
-theme_set(theme_void(base_family = "Helvetica"))
-
-theme_update(
-  axis.text.x = element_text(color = "black", face = "bold", size = 26, 
-                             margin = margin(t = 6)),
-  axis.text.y = element_text(color = "black", size = 22, hjust = 1, 
-                             margin = margin(r = 6), family = "Helvetica"),
-  axis.line.x = element_line(color = "black", size = 1),
-  panel.grid.major.y = element_line(color = "grey90", size = .6),
-  plot.background = element_rect(fill = "white", color = "white"),
-  plot.margin = margin(rep(20, 4))
-)
-
-
-## custom colors
-my_pal <- rcartocolor::carto_pal(n = 8, name = "Bold")[c(1, 3, 7, 2)]
-
-## theme for horizontal charts
-theme_flip <-
-  theme(
-    axis.text.x = element_text(face = "plain", family = "Helvetica", size = 22),
-    axis.text.y = element_text(face = "bold", family = "Helvetica", size = 30),
-    axis.title.x = element_text(face = "bold", family = "Helvetica", size = 22),
-    panel.grid.major.x = element_blank(),#element_line(color = "grey90", size = .6),
-    panel.grid.major.y = element_blank(),
-    axis.ticks.x = element_line(color = "black", size = 1.0),
-    axis.ticks.length.x = unit(0.1,"cm"),
-    legend.position = "none", 
-    legend.text = element_text(family = "Helvetica", size = 18),
-    legend.title = element_text(face = "bold", size = 18),
-    panel.border = element_rect(colour = "black", fill=NA, size=1)
-  )
-
-  label_t = c(TeX(r"($C_v$)"),TeX(r"($C_b$)"))
-  
-  ggplot(df_plot, aes(x = forcats::fct_rev(scen), y = cost/4/(1e9), 
-                   color = scen, fill = scen)) +
-    geom_boxplot(
-      width = .1, fill = "white",
-      size = 1.5, outlier.shape = NA) +
-    ggdist::stat_halfeye(
-      adjust = .33,
-      width = .5, 
-      color = NA,
-      position = position_nudge(x = .09)
-    ) +
-    gghalves::geom_half_point(
-      side = "l", 
-      range_scale = .3, 
-      alpha = .5, size = 1.5,position = position_nudge(x = .03)
-    ) +
-    scale_y_continuous(sec.axis = sec_axis(~.*4,name = "Cost (billion US$)"))+
-    scale_x_discrete(breaks = c("Vaccination","No Vaccination"),labels = label_t, expand=expansion(mult=c(0,0)))+
-    labs(y="Cost (billion US$)",y=NULL)+
-    coord_flip() +
-    scale_color_manual(values = my_pal[c(1,4)], guide = "none") +
-    scale_fill_manual(values = my_pal[c(1,4)], guide = "none") +
-    theme_flip
-  
-  
-  
-  
-  ggsave(
-    "../figures/cost.png",
-    device = "png",
-    width = 7,
-    height = 6,
-    dpi = 300,
-  )
-  
-  ggsave(
-    "../figures/cost.pdf",
-    device = "pdf",
-    width = 7,
-    height = 6,
-    dpi = 300,
-  )
-  
-  
-  
-  
-  
-  ## general theme
-  theme_set(theme_void(base_family = "Helvetica"))
-  
-  theme_update(
-    axis.text.x = element_text(color = "black", face = "bold", size = 26, 
-                               margin = margin(t = 6)),
-    #axis.text.y = element_text(color = "black", size = 22, hjust = 1, 
-    #margin = margin(r = 6), family = "Arial"),
-    axis.line.x = element_line(color = "black", size = 1),
-    panel.grid.major.y = element_line(color = "grey90", size = .6),
-    plot.background = element_rect(fill = "white", color = "white"),
-    plot.margin = margin(rep(20, 4))
-  )
-  ## theme for horizontal charts
-  theme_flip <-
-    theme(
-      axis.text.x = element_text(face = "plain", family = "Helvetica", size = 22),
-      #axis.text.y = element_text(face = "bold", family = "Arial", size = 26),
-      axis.title.x = element_text(face = "bold", family = "Helvetica", size = 22),
-      panel.grid.major.x = element_blank(),#element_line(color = "grey90", size = .6),
-      panel.grid.major.y = element_blank(),
-      axis.ticks.x = element_line(color = "black", size = 1.0),
-      axis.ticks.length.x = unit(0.1,"cm"),
-      legend.position = "none", 
-      legend.text = element_text(family = "Helvetica", size = 18),
-      legend.title = element_text(face = "bold", size = 18),
-      panel.border = element_rect(colour = "black", fill=NA, size=1)
-    )
-
-dd = as.data.frame(ROI)
-df_point = data.frame(x = c(as.factor(1),as.factor(1)),y = quantile(ROI,c(0.025,0.975),name=F))
-
-ggplot(dd, aes(x = forcats::fct_rev(as.factor(1)), y = ROI,color = as.factor(1),fill = as.factor(1))) +
-  geom_boxplot(
-    width = .08, fill = "white",
-    size = 1.1, outlier.shape = NA) +
-  ggdist::stat_halfeye(
-    adjust = .33,
-    width = .3, 
-    color = NA,
-    position = position_nudge(x = .07)
-  ) +
-  gghalves::geom_half_point(
-    side = "l", 
-    range_scale = .2, 
-    alpha = .5, size = 1.5,position = position_nudge(x = .08)
-  ) +
-  stat_summary(fun = mean,geom="point", color= "#88419d", fill = "#88419d",shape = 21, size = 2.5)+
-  geom_point(data=df_point, aes(x = x,y=y),color= "#88419d", fill = "#88419d",shape = 23, size = 2.5)+
-  scale_y_continuous(limits= c(54.2,63.8),breaks = seq(55,63,2),expand=expansion(mult=c(0,0)))+
-  scale_x_discrete(expand=expansion(mult=c(0,0)))+
-  labs(y="Return of investment",y=NULL)+
-  coord_flip() +
-  scale_color_manual(values = pal_plots[1], guide = "none") +
-  scale_fill_manual(values = pal_plots[1], guide = "none") +
-  theme_flip
-
-
-
-ggsave(
-  "../figures/ROI.pdf",
-  device = "pdf",
-  width = 7,
-  height = 4,
-  dpi = 300
-)
-
-
-dd %>% summarise(m = mean(ROI),ci1 = quantile(ROI,0.025,name=F),ci2 = quantile(ROI,0.975,name=F))
-
-
-table = data.frame(Vaccination=c(mean(direct_vaccination_cost),mean(indirect_vaccination_cost), mean(cost_hospital), mean(cost_indirect_ill1),mean(cost_yll1)),
-                   NoVaccination=c(NA,NA, mean(cost_hospital2), mean(cost_indirect_ill2),mean(cost_yll2)))
-rownames(table) = c("Direct Vaccination Cost","Indirect Vaccination Cost","Direct cost of Illness","Illness indirect cost","YLL cost")
-table %>% mutate(Vaccination = format(Vaccination, big.mark=","),
-                 NoVaccination = format(NoVaccination, big.mark=","))
-
-
-colSums(table,na.rm=T) %>% format( big.mark=",")
-
-
-# Data for plot -----------------------------------------------------------
-
-dd = data.frame(ROI=ROI_society)
-df_point = data.frame(x = c(as.factor(1),as.factor(1)),y = quantile(ROI_society,c(0.025,0.975),name=F))
-
-
-ggplot(dd, aes(x = forcats::fct_rev(as.factor(1)), y = ROI,color = as.factor(1),fill = as.factor(1)))+
-  geom_boxplot(
-  width = .08, fill = "white",
-  size = 1.1, outlier.shape = NA) +
-  ggdist::stat_halfeye(
-    adjust = .33,
-    width = .3, 
-    color = NA,
-    position = position_nudge(x = .07)
-  ) +
-  gghalves::geom_half_point(
-    side = "l", 
-    range_scale = .2, 
-    alpha = .5, size = 1.5,position = position_nudge(x = .08)
-  ) +
-  stat_summary(fun = mean,geom="point", color= "#6a51a3", fill = "#6a51a3",shape = 21, size = 2.5)+
-  geom_point(data=df_point, aes(x = x,y=y),color= "#6a51a3", fill = "#6a51a3",shape = 23, size = 2.5)+
-  scale_y_continuous(limits= c(26.5,32.5),breaks = seq(27,32,1),expand=expansion(mult=c(0,0)))+
-  scale_x_discrete(expand=expansion(mult=c(0,0)))+
-  labs(y="Return of investment",y=NULL)+
-  coord_flip() +
-  scale_color_manual(values = pal_plots[3], guide = "none") +
-  scale_fill_manual(values = pal_plots[3], guide = "none") +
-  theme_flip
-
-
-ggsave(
-  "../figures/ROI_soc.pdf",
-  device = "pdf",
-  width = 7,
-  height = 4,
-  dpi = 300
-)
-
-
-dd %>% summarise(m = mean(ROI),ci1 = quantile(ROI,0.025,name=F),ci2 = quantile(ROI,0.975,name=F))
-
-
-table = data.frame(Vaccination=c(mean(direct_vaccination_cost),mean(indirect_vaccination_cost), mean(cost_hospital), mean(cost_indirect_ill1),mean(cost_yll1)),
-                   NoVaccination=c(NA,NA, mean(cost_hospital2), mean(cost_indirect_ill2),mean(cost_yll2)))
-rownames(table) = c("Direct Vaccination Cost","Indirect Vaccination Cost","Direct cost of Illness","Illness indirect cost","YLL cost")
-table %>% mutate(Vaccination = format(Vaccination, big.mark=","),
-                 NoVaccination = format(NoVaccination, big.mark=","))
-
-
-colSums(table,na.rm=T) %>% format( big.mark=",")
-
-
-# YLL figure --------------------------------------------------------------
-
-mean(cost_yll2)/mean(cost_yll1)
-
-df_plot = data.frame(cost = c(cost_yll1,cost_yll2),
-                     scen= c(rep("Vaccination",length(cost_yll1)),rep("No Vaccination",length(cost_yll2))))
-# 
-
-df_plot
-
-theme_set(theme_void(base_family = "Helvetica"))
-
-theme_update(
-  axis.text.x = element_text(color = "black", face = "bold", size = 26, 
-                             margin = margin(t = 6)),
-  axis.text.y = element_text(color = "black", size = 22, hjust = 1, 
-                             margin = margin(r = 6), family = "Helvetica"),
-  axis.line.x = element_line(color = "black", size = 1),
-  panel.grid.major.y = element_line(color = "grey90", size = .6),
-  plot.background = element_rect(fill = "white", color = "white"),
-  plot.margin = margin(rep(20, 4))
-)
-
-#15946e
-## custom colors
-#my_pal <- rcartocolor::carto_pal(n = 8, name = "Bold")[c(1, 3, 7, 2)]
-my_pal <- c(rcartocolor::carto_pal(n = 8, name = "Bold")[c(1, 3, 7)],"#15946e")
-
-## theme for horizontal charts
-theme_flip <-
-  theme(
-    axis.text.x = element_text(face = "plain", family = "Helvetica", size = 22),
-    axis.text.y = element_text(face = "bold", family = "Helvetica", size = 30),
-    axis.title.x = element_text(face = "bold", family = "Helvetica", size = 22),
-    panel.grid.major.x = element_blank(),#element_line(color = "grey90", size = .6),
-    panel.grid.major.y = element_blank(),
-    axis.ticks.x = element_line(color = "black", size = 1.0),
-    axis.ticks.length.x = unit(0.1,"cm"),
-    legend.position = "none", 
-    legend.text = element_text(family = "Helvetica", size = 18),
-    legend.title = element_text(face = "bold", size = 18),
-    panel.border = element_rect(colour = "black", fill=NA, size=1)
-  )
-
-label_t = c(TeX(r"($C_v$)"),TeX(r"($C_b$)"))
-
-df_point = data.frame(x = c("Vaccination","Vaccination"),y = c(32,35.8))
-
-ggplot(df_plot %>% filter(scen == "Vaccination"), aes(x = forcats::fct_rev(scen), y = cost/(1e9), 
-                    color = scen, fill = scen)) +
-  geom_boxplot(
-    width = .08, fill = "white",
-    size = 1.1, outlier.shape = NA) +
-  ggdist::stat_halfeye(
-    adjust = .33,
-    width = .3, 
-    color = NA,
-    position = position_nudge(x = .07)
-  ) +
-  gghalves::geom_half_point(
-    side = "l", 
-    range_scale = .2, 
-    alpha = .5, size = 1.5,position = position_nudge(x = .08)
-  ) +
-  stat_summary(fun = mean,geom="point", color= "#88419d", fill = "#88419d",shape = 21, size = 2.5)+
-  geom_point(data=df_point, aes(x = x,y=y),color= "#88419d", fill = "#88419d",shape = 23, size = 2.5)+
-  scale_y_continuous(limits = c(30.5,37.5),breaks = seq(31,37), expand=expansion(mult=c(0,0)))+
-  scale_x_discrete(breaks = c("Vaccination"),labels = label_t, expand=expansion(mult=c(0,0)))+
-  labs(y="Cost (billion US$)",y=NULL)+
-  coord_flip() +
-  scale_color_manual(values = pal_plots[1], guide = "none") +
-  scale_fill_manual(values = pal_plots[1], guide = "none") +
-  theme_flip
-
-
-
-
-ggsave(
-  "../figures/VSLvac.pdf",
-  device = "pdf",
-  width = 7,
-  height = 4,
-  dpi = 300,
-)
-
-df_point = data.frame(x = c("No Vaccination","No Vaccination"),y = c(140.7,157.7))
-
-
-ggplot(df_plot %>% filter(scen == "No Vaccination"), aes(x = forcats::fct_rev(scen), y = cost/(1e9), 
-                    color = scen, fill = scen)) +
-  geom_boxplot(
-    width = .08, fill = "white",
-    size = 1.1, outlier.shape = NA) +
-  ggdist::stat_halfeye(
-    adjust = .33,
-    width = .3, 
-    color = NA,
-    position = position_nudge(x = .07)
-  ) +
-  gghalves::geom_half_point(
-    side = "l", 
-    range_scale = .2, 
-    alpha = .5, size = 1.5,position = position_nudge(x = .08)
-  ) +
-  stat_summary(fun = mean,geom="point", color= "#6a51a3", fill = "#6a51a3",shape = 21, size = 2.5)+
-  geom_point(data=df_point, aes(x = x,y=y),color= "#6a51a3", fill = "#6a51a3",shape = 23, size = 2.5)+
-  scale_y_continuous(limits = c(137.5,162.5),breaks = seq(140,160,4),expand=expansion(mult=c(0,0)))+
-  scale_x_discrete(breaks = c("No Vaccination"),labels = label_t, expand=expansion(mult=c(0,0)))+
-  labs(y="Cost (billion US$)",y=NULL)+
-  coord_flip() +
-  scale_color_manual(values = pal_plots[3], guide = "none") +
-  scale_fill_manual(values = pal_plots[3], guide = "none") +
-  theme_flip
-
-
-
-
-ggsave(
-  "../figures/VSLnovac.pdf",
-  device = "pdf",
-  width = 7,
-  height = 4,
-  dpi = 300,
-)
-
-
+bb = FVI
 
 # Let's read the file containing the amount of people that died at age x in each sim
-
-# 
-# age_groups1 = c(0,18,25,35,45,55,65,75)
-# age_groups2 = c(17,24,34,44,54,64,74,99)
-# names = paste(age_groups1,"-",age_groups2)
-
-# # 
-# age_groups1 = c(0,10,20,30,40,50,60,70,80,90)
-# age_groups2 = c(9,19,29,39,49,59,69,79,89,99)
-# names = paste(age_groups1,"-",age_groups2)
-# 
-# 
-# age_of_death= read.table("data/results_prob_0_121_1_newyorkcity/year_of_death.dat",h=F)
-# dim(age_of_death)
-# 
-# life_exp = read.csv("data/life_exp.csv",sep = ";",h=F)$V2[1:nrow(age_of_death)]
-# 
-# 
-# ff <- function(x){
-#   aux = life_exp[(age_groups1[x]+1):(age_groups2[x]+1)]*age_of_death[(age_groups1[x]+1):(age_groups2[x]+1),]
-#   
-#   return(colSums(aux))
-# }
-# 
-# bb <- function(x){
-#   a = boot::boot(as.vector(x),fc,500)$t[,1]
-#   c = c(mean(a),quantile(a,0.025,name=F),quantile(a,0.975,name=F))
-# }
-# 
-# listb = lapply(seq(1:length(age_groups1)),ff)
-# 
-# ll = lapply(listb,bb)
-# m1 = matrix(unlist(ll), ncol = 3,byrow = T)
-# 
-# 
-# 
-# age_of_death= read.table("data/results_prob_0_121_2_newyorkcity/year_of_death.dat",h=F)
-# dim(age_of_death)
-# 
-# ff <- function(x){
-#   aux = life_exp[(age_groups1[x]+1):(age_groups2[x]+1)]*age_of_death[(age_groups1[x]+1):(age_groups2[x]+1),]
-#   
-#   return(colSums(aux))
-# }
-# 
-# bb <- function(x){
-#   a = boot::boot(as.vector(x),fc,500)$t[,1]
-#   c = c(mean(a),quantile(a,0.025,name=F),quantile(a,0.975,name=F))
-# }
-# 
-# listb = lapply(seq(1:length(age_groups1)),ff)
-# 
-# ll = lapply(listb,bb)
-# m2 = matrix(unlist(ll), ncol = 3,byrow = T)
-# 
-# 
-# df = data.frame(group = c(names,names),mm = rbind(m1,m2),scen = c(rep("Vaccination",length(names)),rep("No Vaccination",length(names))))
-# head(df)
-# 
-# df = df %>% rename(mean=mm.1,ci1=mm.2,ci2=mm.3) %>% mutate(mean = mean*factor_deaths*population/100000,
-#                                                            ci1 = ci1*factor_deaths*population/100000,ci2=ci2*factor_deaths*population/100000)
-# head(df)
-# 
-# theme_set(theme_bw())
-# theme_flip <-
-#   theme(
-#     axis.text.x = element_text(color = "black",face = "bold", family = "Helvetica", size = 16,angle = 45,hjust=01.0,vjust=1.0),
-#     axis.text.y = element_text(color = "black",face = "bold", family = "Helvetica", size = 20),
-#     axis.title.y = element_text(face = "bold", family = "Helvetica", size = 24,angle = 90),
-#     panel.grid.major.x = element_blank(),#element_line(color = "grey90", size = .6),
-#     panel.grid.major.y = element_line(color = "grey90", size = .6),
-#     axis.ticks.x = element_line(color = "black", size = 1.0),
-#     axis.ticks.length.x = unit(0.1,"cm"),
-#     legend.position = c(0.28,0.88),
-#     legend.box.background = element_rect(color = "black", size = .6),
-#     legend.text = element_text(face="bold",family = "Helvetica", size = 14),
-#     legend.title = element_text(face = "bold", size = 18),
-#     panel.border = element_rect(colour = "black", fill=NA, size=1)
-#   )
-# 
-# ggplot(data = df)+
-#   geom_col(aes(x=group,y=mean, color=scen,fill = scen,fill = after_scale(colorspace::lighten(fill, .5))),position=position_dodge2(),size=1.0)+
-#   geom_errorbar(aes(x=group,ymin=ci1,ymax=ci2, color=scen),width=0.5,size = 1.25,position=position_dodge(0.9))+
-#   scale_color_manual(values = my_pal[c(1,4)],name = NULL) +
-#   scale_fill_manual(values = my_pal[c(1,4)],name = NULL) +
-#   scale_y_continuous(expand=expansion(mult=c(0,0.05)), name = "Years of life lost")+
-#   scale_x_discrete(name = NULL)+
-#   theme_flip
-# 
-# 
-# 
-# ggsave(
-#   "../figures/YLL.png",
-#   device = "png",
-#   width = 5.5,
-#   height = 5,
-#   dpi = 300
-# )
-# 
-# 
-# ggsave(
-#   "../figures/YLL.pdf",
-#   device = "pdf",
-#   width = 5.5,
-#   height = 5,
-#   dpi = 300
-# )
-# 
-# 
-# df
-# write.csv(df,"../figures/YLL.csv",row.names = F)
-# 
-# 
-# ### Average
-# 
-# 
-# ffm <- function(x){
-#   aux = life_exp[(age_groups1[x]+1):(age_groups2[x]+1)]*age_of_death[(age_groups1[x]+1):(age_groups2[x]+1),]
-#   
-#   mm = sum(aux)/sum(age_of_death[(age_groups1[x]+1):(age_groups2[x]+1),])
-#   
-#   return(mm)
-# }
-# 
-# 
-# listb = lapply(seq(1:length(age_groups1)),ffm)
-# 
-# mm = matrix(unlist(listb), ncol = 1,byrow = T)
-# row.names(mm) = names
-
-
 # plot --------------------------------------------------------------------
 
 
@@ -1072,9 +426,11 @@ theme_flip <-
     panel.border = element_rect(colour = "black", fill=NA, size=1)
   )
 
-dd = data.frame(ROI=bb$t[,1])
+dd = data.frame(ROI=bb)
 df_point = data.frame(x = c(as.factor(1),as.factor(1)),y = quantile(dd$ROI,c(0.025,0.975),name=F))
 
+mean(dd$ROI)
+df_point
 
 ggplot(dd, aes(x = forcats::fct_rev(as.factor(1)), y = ROI,color = as.factor(1),fill = as.factor(1)))+
   geom_boxplot(
@@ -1103,10 +459,91 @@ ggplot(dd, aes(x = forcats::fct_rev(as.factor(1)), y = ROI,color = as.factor(1),
 
 
 ggsave(
-  "../data/savings.pdf",
+  "../data/savings_direct.pdf",
   device = "pdf",
-  width = 7,
+  width = 7.5,
   height = 4,
   dpi = 300
 )
 
+
+
+
+# Indirect -----------------------------------------------------------------
+
+#Initial Value Investment
+set.seed(1432)
+bb_vac = boot::boot(cost_indirect_ill1,fc,1000)$t[,1]
+total_cost_vaccination = bb_vac+indirect_vaccination_cost
+set.seed(1432)
+total_cost_no_vac = boot::boot(cost_indirect_ill2,fc,1000)$t[,1]
+
+###
+
+# Final value of investment
+FVI = total_cost_no_vac - total_cost_vaccination
+bb = FVI
+
+
+
+# Let's read the file containing the amount of people that died at age x in each sim
+# plot --------------------------------------------------------------------
+
+
+## theme for horizontal charts
+theme_flip <-
+  theme(
+    axis.text.x = element_text(face = "plain", family = "Helvetica", size = 22),
+    axis.text.y = element_blank(),
+    axis.title.y = element_blank(), 
+    axis.title.x = element_text(face = "bold", family = "Helvetica", size = 22),
+    panel.grid.major.x = element_blank(),#element_line(color = "grey90", size = .6),
+    panel.grid.major.y = element_blank(),
+    panel.background = element_rect("white"),
+    axis.ticks.x = element_line(color = "black", size = 1.0),
+    axis.ticks.length.x = unit(0.1,"cm"),
+    legend.position = "none", 
+    legend.text = element_text(family = "Helvetica", size = 18),
+    legend.title = element_text(face = "bold", size = 18),
+    panel.border = element_rect(colour = "black", fill=NA, size=1)
+  )
+
+dd = data.frame(ROI=bb)
+df_point = data.frame(x = c(as.factor(1),as.factor(1)),y = quantile(dd$ROI,c(0.025,0.975),name=F))
+
+mean(dd$ROI)
+df_point
+
+ggplot(dd, aes(x = forcats::fct_rev(as.factor(1)), y = ROI,color = as.factor(1),fill = as.factor(1)))+
+  geom_boxplot(
+    width = .08, fill = "white",
+    size = 1.1, outlier.shape = NA) +
+  ggdist::stat_halfeye(
+    adjust = .33,
+    width = .3, 
+    color = NA,
+    position = position_nudge(x = .07)
+  ) +
+  gghalves::geom_half_point(
+    side = "l", 
+    range_scale = .2, 
+    alpha = .5, size = 1.5,position = position_nudge(x = .08)
+  ) +
+  stat_summary(fun = mean,geom="point", color= "#6a51a3", fill = "#6a51a3",shape = 21, size = 2.5)+
+  geom_point(data=df_point, aes(x = x,y=y),color= "#6a51a3", fill = "#6a51a3",shape = 23, size = 2.5)+
+  scale_y_continuous(expand=expansion(mult=c(0,0)))+
+  scale_x_discrete(expand=expansion(mult=c(0,0)))+
+  labs(y="Savings",y=NULL)+
+  coord_flip() +
+  scale_color_manual(values = pal_plots[1], guide = "none") +
+  scale_fill_manual(values = pal_plots[1], guide = "none") +
+  theme_flip
+
+
+ggsave(
+  "../data/savings_indirect.pdf",
+  device = "pdf",
+  width = 7.5,
+  height = 4,
+  dpi = 300
+)
