@@ -1,6 +1,9 @@
 # COVID-19 Agent Based Model
 Estimating One-Year Impact of COVID-19 Vaccination in the United States: A Modelling Study
 
+> :warning: **For the paper called: Estimating the Impact of Vaccination on Reducing COVID-19 Burden in the United States: December 2020 to March 2022
+, refer to the (National Estimation of March)[https://github.com/thomasvilches/USomicron/edit/national_estimation_march]**
+
 ## Model details:
 A stochastic, age-stratified agent-based computational model for the transmission dynamics of COVID-19. The computational model simulates autonomous agents (representing individuals in a human population) and their interactions within a constrained virtual environment. Agents follow the natural history of disease, including epidemiological stages of susceptible, infected and incubating, asymptomatic, presymptomatic, and symptomatic with either mild, severe, or critical illness, recovered, and dead.
 
