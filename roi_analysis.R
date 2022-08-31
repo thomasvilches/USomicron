@@ -15,7 +15,9 @@ library(latex2exp)
 library(zoo)
 library(data.table)
 # Parameters -------------------------------------------------------------------
-set.seed(1432)
+#1432
+#112
+set.seed(112)
 #Total cost of vaccine clinic setup 
 cost_setup = 3022840
 
@@ -230,16 +232,16 @@ sum.sim.icu = sum.sim.icu*factor_hos
 
 
 #cost mild infection of hospital
-set.seed(1432)
+set.seed(112)
 cost_symp = (boot::boot(sum.sim.mild,fc,1000)$t[,1])*
   n_outpatient_visits*LHS_tab$Outpatient
 #cost severe non-hospitalized infection
-set.seed(1432)
+set.seed(112)
 cost_inf = (boot::boot(sum.sim.inf,fc,1000)$t[,1])*LHS_tab$ED.care
 #cost for hospitalizations
-set.seed(1432)
+set.seed(112)
 cost_hos = (boot::boot(sum.sim.hos,fc,1000)$t[,1])*(LHS_tab$Hospitalization.without.ICU+n_EMS_calls*LHS_tab$EMS.transportation)
-set.seed(1432)
+set.seed(112)
 cost_icu = (boot::boot(sum.sim.icu,fc,1000)$t[,1])*(LHS_tab$Hospitalization.with.ICU+n_EMS_calls*LHS_tab$EMS.transportation)
 
 cost_hospital = (cost_symp+cost_inf+cost_hos+cost_icu)*population/100000
@@ -302,16 +304,16 @@ sum.sim.hos2 = sum.sim.hos2*factor_hos
 sum.sim.icu2 = sum.sim.icu2*factor_hos
 
 #cost mild infection of hospital
-set.seed(1432)
+set.seed(112)
 cost_symp = (boot::boot(sum.sim.mild2,fc,1000)$t[,1])*
   n_outpatient_visits*LHS_tab$Outpatient
 #cost severe non-hospitalized infection
-set.seed(1432)
+set.seed(112)
 cost_inf = (boot::boot(sum.sim.inf2,fc,1000)$t[,1])*LHS_tab$ED.care
 #cost for hospitalizations
-set.seed(1432)
+set.seed(112)
 cost_hos = (boot::boot(sum.sim.hos2,fc,1000)$t[,1])*(LHS_tab$Hospitalization.without.ICU+n_EMS_calls*LHS_tab$EMS.transportation)
-set.seed(1432)
+set.seed(112)
 cost_icu = (boot::boot(sum.sim.icu2,fc,1000)$t[,1])*(LHS_tab$Hospitalization.with.ICU+n_EMS_calls*LHS_tab$EMS.transportation)
 
 cost_hospital2 = (cost_symp+cost_inf+cost_hos+cost_icu)*population/100000
@@ -386,10 +388,10 @@ cost_indirect_ill2 = total2_hos*perc_vac_emp*pcpi_nyc/365*population/100000
 # Results -----------------------------------------------------------------
 
 pal_plots = c("#885687","#9ebcda","#756bb1","#bcbddc")
-
+show_col(pal_plots)
 
 # Direct -----------------------------------------------------------------
-set.seed(1432)
+set.seed(112)
 ind_vac = boot::boot(indirect_vaccination_cost,fc,1000)$t[,1]
 
 #Initial Value Investment
@@ -449,7 +451,7 @@ ggplot(dd, aes(x = forcats::fct_rev(as.factor(1)), y = ROI,color = as.factor(1),
   ) +
   stat_summary(fun = mean,geom="point", color= "#6a51a3", fill = "#6a51a3",shape = 21, size = 2.5)+
   geom_point(data=df_point, aes(x = x,y=y),color= "#6a51a3", fill = "#6a51a3",shape = 23, size = 2.5)+
-  scale_y_continuous(expand=expansion(mult=c(0,0)))+
+  scale_y_continuous(expand=expansion(mult=c(0,0)), limits = c(5e11, 1.3e12), breaks = c(6e11,8e11,1e12,1.2e12))+
   scale_x_discrete(expand=expansion(mult=c(0,0)))+
   labs(y="Savings",y=NULL)+
   coord_flip() +
@@ -472,10 +474,10 @@ ggsave(
 # Indirect -----------------------------------------------------------------
 
 #Initial Value Investment
-set.seed(1432)
+set.seed(112)
 bb_vac = boot::boot(cost_indirect_ill1,fc,1000)$t[,1]
 total_cost_vaccination = bb_vac+indirect_vaccination_cost
-set.seed(1432)
+set.seed(112)
 total_cost_no_vac = boot::boot(cost_indirect_ill2,fc,1000)$t[,1]
 
 ###
@@ -529,8 +531,8 @@ ggplot(dd, aes(x = forcats::fct_rev(as.factor(1)), y = ROI,color = as.factor(1),
     range_scale = .2, 
     alpha = .5, size = 1.5,position = position_nudge(x = .08)
   ) +
-  stat_summary(fun = mean,geom="point", color= "#6a51a3", fill = "#6a51a3",shape = 21, size = 2.5)+
-  geom_point(data=df_point, aes(x = x,y=y),color= "#6a51a3", fill = "#6a51a3",shape = 23, size = 2.5)+
+  stat_summary(fun = mean,geom="point", color= pal_plots[1], fill = pal_plots[1],shape = 21, size = 2.5)+
+  geom_point(data=df_point, aes(x = x,y=y),color=pal_plots[1], fill = pal_plots[1],shape = 23, size = 2.5)+
   scale_y_continuous(expand=expansion(mult=c(0,0)))+
   scale_x_discrete(expand=expansion(mult=c(0,0)))+
   labs(y="Savings",y=NULL)+
