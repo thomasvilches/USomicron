@@ -209,18 +209,37 @@ write.csv(df,"DeathFactors.csv",row.names=F)
 #setwd("~/PosDoc/Coronavirus/USomicron/")
 ### https://covid.cdc.gov/covid-data-tracker/#vaccination-trends
 #need to remove lines from header
-data_boost = read.csv("../trends_in_number_of_covid19_vaccinations_in_the_us.csv")
+data_boost = read.csv("../trends_in_number_of_covid19_vaccinations_in_the_us_firstbooster.csv")
 
-data_boost = data_boost %>% filter(Date.Type == "Admin") %>% select(Date,Daily.Count.People.Receiving.a.First.Booster.Dose) %>%
-  rename(Booster = Daily.Count.People.Receiving.a.First.Booster.Dose) %>% 
-  mutate(Date = as.Date(Date), Booster = as.numeric(Booster)) %>%
+data_boost = data_boost %>% #filter(Date.Type == "Admin") %>% 
+  select(Date = `ï..Date`,Daily.Count.People.Receiving.a.First.Booster.Dose, Daily.Count.of.People.Ages.50...Receiving.a.Second.Booster.Dose) %>%
+  rename(Booster = Daily.Count.People.Receiving.a.First.Booster.Dose, SecBooster = Daily.Count.of.People.Ages.50...Receiving.a.Second.Booster.Dose) %>% 
+  mutate(Date = as.Date(Date), Booster = as.numeric(Booster), SecBooster = as.numeric(SecBooster)) %>%
   filter(Date <= enddate)
 
 
 ggplot()+geom_col(data=data_boost,aes(x=Date,y=Booster))+scale_y_continuous()
+
 data_boost$Booster100 = round(data_boost$Booster*100000/population)
+data_boost$SecBooster100 = round(data_boost$SecBooster*100000/population)
+
+
 min(data_boost$Date)-as.Date("2020-09-01")
-write.table(c(0,data_boost$Booster100),"~/PosDoc/Coronavirus/USomicron/booster_may.dat",row.names = F,col.names = F)
+
+write.table(c(0,data_boost$Booster100),"../booster1_aug.dat",row.names = F,col.names = F)
+
+write.table(c(0,data_boost$SecBooster100),"../booster2_aug.dat",row.names = F,col.names = F)
+
+
+
+ggplot()+geom_col(data=data_boost,aes(x=Date,y=Booster))+scale_y_continuous()
+
+data_boost$Booster100 = round(data_boost$Booster*100000/population)
+
+min(data_boost$Date)-as.Date("2020-09-01")
+
+write.table(c(0,data_boost$Booster100),"../booster1_aug.dat",row.names = F,col.names = F)
+
 sum(data_boost$Booster100)
 aux = data_boost[data_boost$Date >= as.Date("2021-12-01") & data_boost$Date <= enddate,]
 aa = mean(aux$Booster)
@@ -236,8 +255,8 @@ ggplot()+geom_col(data=aux,aes(x=Date,y=Booster))+geom_hline(yintercept = aa)
 #### hospoitalization
 ### https://healthdata.gov/Hospital/COVID-19-Reported-Patient-Impact-and-Hospital-Capa/g62h-syeh
 library(zoo)
-setwd("~/PosDoc/Coronavirus/USomicron/")
-data.hos = read.csv("~/PosDoc/Coronavirus/USomicron/COVID-19_Reported_Patient_Impact_and_Hospital_Capacity_by_State_Timeseries.csv")
+
+data.hos = read.csv("../COVID-19_Reported_Patient_Impact_and_Hospital_Capacity_by_State_Timeseries.csv")
 head(data.hos)
 data.hos = data.hos[,c("state","date","previous_day_admission_adult_covid_confirmed","previous_day_admission_pediatric_covid_confirmed")]
 head(data.hos)
@@ -292,7 +311,7 @@ head(data.cases)
 
 
 
-write.csv(data.cases,"data_us_may.csv",row.names=F)
+write.csv(data.cases,"data_us_aug.csv",row.names=F)
 
 
 
