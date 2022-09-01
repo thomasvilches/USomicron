@@ -5,6 +5,8 @@ library(ggplot2)
 theme_set(theme_bw())
 enddate=as.Date("2022-08-30")#as.Date("2022-01-31")
 startvacdate = as.Date("2020-12-12")
+
+population = 332968798
 # Deaths per state --------------------------------------------------------
 
 temp <- tempfile()
@@ -54,7 +56,6 @@ library(readxl)
 library(dplyr)
 library(ggplot2)
 
-population = 332968798
 ### https://data.cdc.gov/Vaccinations/COVID-19-Vaccination-Demographics-in-the-United-St/km4m-vcsb
 data = read.csv("../COVID-19_Vaccination_Demographics_in_the_United_States_National.csv")
 head(data)
@@ -311,7 +312,7 @@ head(data.cases)
 
 
 
-write.csv(data.cases,"data_us_aug.csv",row.names=F)
+write.csv(data.cases,"../data_us_aug.csv",row.names=F)
 
 
 
