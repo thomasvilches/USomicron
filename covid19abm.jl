@@ -121,8 +121,8 @@ end
 
     mortality_inc::Float64 = 1.3 #The mortality increase when infected by strain 2
 
-    vaccine_proportion::Vector{Float64} = [0.561 0.369 0.0]
-    vaccine_proportion_2::Vector{Float64} = [0.561 0.369 0.0]
+    vaccine_proportion::Vector{Float64} = [0.561;0.369;0.0]
+    vaccine_proportion_2::Vector{Float64} = [0.561;0.369;0.0]
     vac_period::Array{Int64,1} = [21;28;9999]
     n_boosts::Int64 = 1
     min_age_booster::Int64 = 16
@@ -146,7 +146,7 @@ end
     [[[0.66;0.7],[0.7,0.97]],[[0.8;0.82],[0.82,0.95]],[[0.88;0.95],[0.95;0.95]],[[0.9;0.91],[0.91,0.98]],[[0.66;0.7],[0.7,0.97]],[[0.744;0.744],[0.744,0.81]]],#### 50:5:80
     [[[0.921]],[[0.816]],[[0.34]],[[0.781]],[[0.921]],[[0.34]]]]#### 50:5:80
 
-    new_vaccine_efficacy::Vector{Float64} = [[0.81; 0.875; 0.94], [0.82;0.89;0.935]]
+    new_vaccine_efficacy::Vector{Vector{Float64}} = [[0.81, 0.875, 0.94], [0.82,0.89,0.935]]
     # ----- Recovery efficacy ----- #
     #https://www.nejm.org/doi/full/10.1056/NEJMc2200133
     # using infection the same as symptoms
@@ -495,7 +495,7 @@ function main(ip::ModelParameters,sim::Int64)
                     aux_ =  vac_time!(sim,vac_ind,time_pos+1,vac_rate_1,vac_rate_2,vac_rate_booster, vac_rate_booster2)
                 else
                     aux_ =  vac_time_oct!(sim,vac_ind,time_pos+1,vac_rate_1,vac_rate_2,vac_rate_booster, vac_rate_booster2)
-
+                end
                 remaining_doses += aux_[1]
                 total_given += aux_[2]
                 if st >= p.day_count_booster
@@ -974,7 +974,7 @@ function vac_time_extra!(sim::Int64,st::Int64,ind1,ind2,indb,r1::Int64,r2::Int64
     return nvacgiven
 end
 
-function vac_time!(sim::Int64,vac_ind::Vector{Vector{Int64}},time_pos::Int64,vac_rate_1::Matrix{Int64},vac_rate_2::Matrix{Int64},vac_rate_booster::Vector{Int64},vac_rate_booster::Vector{Int64})
+function vac_time!(sim::Int64,vac_ind::Vector{Vector{Int64}},time_pos::Int64,vac_rate_1::Matrix{Int64},vac_rate_2::Matrix{Int64},vac_rate_booster::Vector{Int64},vac_rate_booster2::Vector{Int64})
     aux_states = (MILD, MISO, INF, IISO, HOS, ICU, DED)
     ##first dose
    # rng = MersenneTwister(123*sim)
@@ -1298,7 +1298,7 @@ function vac_time!(sim::Int64,vac_ind::Vector{Vector{Int64}},time_pos::Int64,vac
 
 end
 
-function vac_time_oct!(sim::Int64,vac_ind::Vector{Vector{Int64}},time_pos::Int64,vac_rate_1::Matrix{Int64},vac_rate_2::Matrix{Int64},vac_rate_booster::Vector{Int64},vac_rate_booster::Vector{Int64})
+function vac_time_oct!(sim::Int64,vac_ind::Vector{Vector{Int64}},time_pos::Int64,vac_rate_1::Matrix{Int64},vac_rate_2::Matrix{Int64},vac_rate_booster::Vector{Int64},vac_rate_booster2::Vector{Int64})
     aux_states = (MILD, MISO, INF, IISO, HOS, ICU, DED)
     ##first dose
    # rng = MersenneTwister(123*sim)
@@ -1577,7 +1577,7 @@ function vac_time_oct!(sim::Int64,vac_ind::Vector{Vector{Int64}},time_pos::Int64
         end
     end
 
-    ### adding second booster - only for 50+
+    ### In cotuber, we can give 2nd booster for everybody
     pos = findall(y-> y.vac_status == 2 && y.days_vac >= 120 && y.age >= 5 && y.n_boosted == 1 && !(y.health_status in aux_states),humans)
 
     l2 = min(vac_rate_booster2[time_pos],length(pos))

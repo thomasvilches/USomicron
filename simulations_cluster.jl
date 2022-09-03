@@ -18,7 +18,7 @@ using DelimitedFiles
 
 #@everywhere using covid19abm
 
-addprocs(SlurmManager(250), N=16, topology=:master_worker, exeflags = "--project=.")
+addprocs(SlurmManager(500), N=16, topology=:master_worker, exeflags = "--project=.")
 @everywhere using Parameters, Distributions, StatsBase, StaticArrays, Random, Match, DataFrames
 @everywhere include("covid19abm.jl")
 @everywhere const cv=covid19abm
@@ -196,7 +196,7 @@ end
 
 
 
-function run_param_scen_cal(calibrating::Bool,b::Float64,province::String="usa",ic1::Int64=1,ic2::Int64=1,ic3::Int64=1,ic4::Int64=1,ic5::Int64=1,ic6::Int64=1,index::Int64 = 0,idxtime::Int64 = 1,rc=[0.0],dc=[0],mt::Vector{Int64}=[973;-1;-3;-5;-7;-8],vac_cov::Vector{Float64}=[0.8;0.8;0.8;0.8;0.8],vac::Bool=true,tbn::Int64 = 9999,ro::Int64 = 1,dr::Int64=0,hospar::Float64 = 3.1,nsims::Int64=500)
+function run_param_scen_cal(calibrating::Bool,b::Float64,province::String="usa",ic1::Int64=1,ic2::Int64=1,ic3::Int64=1,ic4::Int64=1,ic5::Int64=1,ic6::Int64=1,index::Int64 = 0,idxtime::Int64 = 1,rc=[0.0],dc=[0],mt::Vector{Int64}=[973;-1;-3;-5;-7;-8],vac_cov::Vector{Float64}=[0.8;0.8;0.8;0.8;0.8],vac::Bool=true,tbn::Int64 = 9999,ro::Int64 = 1,dr::Int64=0, new_vac_ef::Vector{Vector{Float64}} = [[0.81; 0.875; 0.94], [0.82;0.89;0.935]],hospar::Float64 = 3.1,nsims::Int64=500)
     
     letters = ["A";"B";"C";"D"]
     #b = bd[h_i]
@@ -209,7 +209,8 @@ function run_param_scen_cal(calibrating::Bool,b::Float64,province::String="usa",
     change_rate_values = $rc,time_back_to_normal = $tbn,relax_over = $ro, reduce_days = $dr,
     hosp_red = $hospar,
     scenario = $index,
-    intervention_prob = $vac_cov)
+    intervention_prob = $vac_cov,
+    new_vaccine_efficacy = $new_vac_ef)
 
     folder = create_folder(ip,province,calibrating,letters[idxtime])
 
