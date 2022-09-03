@@ -181,7 +181,7 @@ end
 
 
     scenario::Int16 = 1
-    time_horizon::Int16 = 1003
+    time_horizon::Int16 = 941
     intervention_prob::Vector{Float16} = [0.8;0.8;0.8;0.8;0.8]
     age_groups_vac::Vector{UnitRange{Int64}} = [5:11,12:17,18:49,50:64,65:100]
 
@@ -891,9 +891,9 @@ function vac_time_extra!(sim::Int64,st::Int64,ind1,ind2,indb,r1::Int64,r2::Int64
             x.n_boosted += 1
             #### ADD here the new vaccine efficacy against Omicron for booster
                 
-            x.vac_eff_inf[6][2][end] = new_vaccine_efficacy[x.vaccine_n][1]
-            x.vac_eff_symp[6][2][end] = new_vaccine_efficacy[x.vaccine_n][2]
-            x.vac_eff_sev[6][2][end] = new_vaccine_efficacy[x.vaccine_n][3]
+            x.vac_eff_inf[6][2][end] = p.new_vaccine_efficacy[x.vaccine_n][1]
+            x.vac_eff_symp[6][2][end] = p.new_vaccine_efficacy[x.vaccine_n][2]
+            x.vac_eff_sev[6][2][end] = p.new_vaccine_efficacy[x.vaccine_n][3]
 
             # we don't  really care about the other ones at this point
             #moderna has a different value against Delta for booster
@@ -940,9 +940,9 @@ function vac_time_extra!(sim::Int64,st::Int64,ind1,ind2,indb,r1::Int64,r2::Int64
                 x.n_boosted += 1
                 #### ADD here the new vaccine efficacy against Omicron for booster
                     
-                x.vac_eff_inf[6][2][end] = new_vaccine_efficacy[x.vaccine_n][1]
-                x.vac_eff_symp[6][2][end] = new_vaccine_efficacy[x.vaccine_n][2]
-                x.vac_eff_sev[6][2][end] = new_vaccine_efficacy[x.vaccine_n][3]
+                x.vac_eff_inf[6][2][end] = p.new_vaccine_efficacy[x.vaccine_n][1]
+                x.vac_eff_symp[6][2][end] = p.new_vaccine_efficacy[x.vaccine_n][2]
+                x.vac_eff_sev[6][2][end] = p.new_vaccine_efficacy[x.vaccine_n][3]
 
                 #moderna has a different value against Delta for booster
                 x.vac_eff_inf[4][2][end] = [x.vac_eff_inf[4][2][end]; 0.94][x.vaccine_n]
@@ -1549,9 +1549,9 @@ function vac_time_oct!(sim::Int64,vac_ind::Vector{Vector{Int64}},time_pos::Int64
         remaining_doses -= 1
         #### ADD here the new vaccine efficacy against Omicron for booster
         
-        x.vac_eff_inf[6][2][end] = new_vaccine_efficacy[x.vaccine_n][1]
-        x.vac_eff_symp[6][2][end] = new_vaccine_efficacy[x.vaccine_n][2]
-        x.vac_eff_sev[6][2][end] = new_vaccine_efficacy[x.vaccine_n][3]
+        x.vac_eff_inf[6][2][end] = p.new_vaccine_efficacy[x.vaccine_n][1]
+        x.vac_eff_symp[6][2][end] = p.new_vaccine_efficacy[x.vaccine_n][2]
+        x.vac_eff_sev[6][2][end] = p.new_vaccine_efficacy[x.vaccine_n][3]
 
         #moderna has a different value against Delta for booster
         x.vac_eff_inf[4][2][end] = [x.vac_eff_inf[4][2][end]; 0.94][x.vaccine_n]
@@ -1592,9 +1592,9 @@ function vac_time_oct!(sim::Int64,vac_ind::Vector{Vector{Int64}},time_pos::Int64
         nvacgiven += 1
         #### ADD here the new vaccine efficacy against Omicron for booster
             
-        x.vac_eff_inf[6][2][end] = new_vaccine_efficacy[x.vaccine_n][1]
-        x.vac_eff_symp[6][2][end] = new_vaccine_efficacy[x.vaccine_n][2]
-        x.vac_eff_sev[6][2][end] = new_vaccine_efficacy[x.vaccine_n][3]
+        x.vac_eff_inf[6][2][end] = p.new_vaccine_efficacy[x.vaccine_n][1]
+        x.vac_eff_symp[6][2][end] = p.new_vaccine_efficacy[x.vaccine_n][2]
+        x.vac_eff_sev[6][2][end] = p.new_vaccine_efficacy[x.vaccine_n][3]
 
         #moderna has a different value against Delta for booster
         x.vac_eff_inf[4][2][end] = [x.vac_eff_inf[4][2][end]; 0.94][x.vaccine_n]
