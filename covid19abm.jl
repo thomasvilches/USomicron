@@ -1577,7 +1577,7 @@ function vac_time_oct!(sim::Int64,vac_ind::Vector{Vector{Int64}},time_pos::Int64
         end
     end
 
-    ### In cotuber, we can give 2nd booster for everybody
+    ### In Octuber, we can give 2nd booster for everybody
     pos = findall(y-> y.vac_status == 2 && y.days_vac >= 120 && y.age >= 5 && y.n_boosted == 1 && !(y.health_status in aux_states),humans)
 
     l2 = min(vac_rate_booster2[time_pos],length(pos))
