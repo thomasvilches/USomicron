@@ -46,13 +46,9 @@ function run(myp::cv.ModelParameters, nsims=1000, folderprefix="./")
     ag2 = vcat([cdr[i].g2 for i = 1:nsims]...)
     ag3 = vcat([cdr[i].g3 for i = 1:nsims]...)
     ag4 = vcat([cdr[i].g4 for i = 1:nsims]...)
-    ag5 = vcat([cdr[i].g5 for i = 1:nsims]...)
-    ag6 = vcat([cdr[i].g6 for i = 1:nsims]...)
-    ag7 = vcat([cdr[i].g7 for i = 1:nsims]...)
-    ag8 = vcat([cdr[i].g8 for i = 1:nsims]...) 
-    ag9 = vcat([cdr[i].g9 for i = 1:nsims]...)  
+   
 
-    mydfs = Dict("all" => allag, "ag1" => ag1, "ag2" => ag2, "ag3" => ag3, "ag4" => ag4, "ag5" => ag5, "ag6" => ag6,"ag7" => ag7,"ag8" => ag8,"ag9" => ag9, "working"=>working)
+    mydfs = Dict("all" => allag, "ag1" => ag1, "ag2" => ag2, "ag3" => ag3, "ag4" => ag4, "working"=>working)
     #mydfs = Dict("all" => allag, "working"=>working, "kids"=>kids)
     #mydfs = Dict("all" => allag)
     
