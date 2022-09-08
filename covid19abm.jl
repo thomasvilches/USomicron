@@ -234,16 +234,19 @@ function runsim(simnum, ip::ModelParameters)
     work = _collectdf(spl[1])
     
     
-    age_groups = [0:17, 18:34, 35:64, 65:999]
+    age_groups = [0:17, 18:29, 30:39, 40:49, 50:64, 65:999]
     ags = map(x->findfirst(y-> x.age in y, age_groups),humans) # store a vector of the age group distribution 
     spl = _splitstate(hmatrix, ags)
     ag1 = _collectdf(spl[1])
     ag2 = _collectdf(spl[2])
     ag3 = _collectdf(spl[3])
     ag4 = _collectdf(spl[4])
+    ag5 = _collectdf(spl[5])
+    ag6 = _collectdf(spl[6])
     
     insertcols!(all, 1, :sim => simnum); insertcols!(ag1, 1, :sim => simnum); insertcols!(ag2, 1, :sim => simnum); 
-    insertcols!(ag3, 1, :sim => simnum); insertcols!(ag4, 1, :sim => simnum); insertcols!(work, 1, :sim => simnum);
+    insertcols!(ag3, 1, :sim => simnum); insertcols!(ag4, 1, :sim => simnum); insertcols!(ag5, 1, :sim => simnum);
+    insertcols!(ag6, 1, :sim => simnum); insertcols!(work, 1, :sim => simnum);
 
     coverage1 = length(findall(x-> x.age >= 18 && x.vac_status >= 1,humans))/length(findall(x-> x.age >= 18,humans))
     coverage2 = length(findall(x-> x.age >= 18 && x.vac_status == 2,humans))/length(findall(x-> x.age >= 18,humans))
@@ -323,7 +326,7 @@ function runsim(simnum, ip::ModelParameters)
     n5plus = count(x-> x.age >= 5, humans)
 
     return (lat=lat, hos=hos, icu=icu, ded=ded, lat2=lat2, hos2=hos2, icu2=icu2, ded2=ded2, lat3=lat3, hos3=hos3, icu3=icu3, ded3=ded3, lat4=lat4, hos4=hos4, icu4=icu4, ded4=ded4, lat5=lat5, hos5=hos5, icu5=icu5, ded5=ded5, lat6=lat6, hos6=hos6, icu6=icu6, ded6=ded6, lat7=lat7, hos7=hos7, icu7=icu7, ded7=ded7, lat8=lat8, hos8=hos8, icu8=icu8, ded8=ded8,
-    a=all, g1=ag1, g2=ag2, g3=ag3, g4=ag4, work = work,
+    a=all, g1=ag1, g2=ag2, g3=ag3, g4=ag4, g5=ag5, g6=ag6, work = work,
     cov1 = coverage1,cov2 = coverage2,cov12 = coverage12,cov22 = coverage22,vector_dead=vector_ded,
     n_pfizer = n_pfizer, n_moderna = n_moderna, n_jensen = n_jensen, n_pfizer_w = n_pfizer_w, n_moderna_w = n_moderna_w, n_jensen_w = n_jensen_w,
     n_pfizer_2 = n_pfizer_2, n_moderna_2 = n_moderna_2, n_jensen_2 = n_jensen_2, n_pfizer_w_2 = n_pfizer_w_2, n_moderna_w_2 = n_moderna_w_2, n_jensen_w_2 = n_jensen_w_2, 
