@@ -49,9 +49,13 @@ function run(myp::cv.ModelParameters, nsims=1000, folderprefix="./")
     ag5 = vcat([cdr[i].g5 for i = 1:nsims]...)
     ag6 = vcat([cdr[i].g6 for i = 1:nsims]...)
     ag7 = vcat([cdr[i].g7 for i = 1:nsims]...)
+    ag8 = vcat([cdr[i].g8 for i = 1:nsims]...)
+    ag9 = vcat([cdr[i].g9 for i = 1:nsims]...)
+    ag10 = vcat([cdr[i].g10 for i = 1:nsims]...)
    
 
-    mydfs = Dict("all" => allag, "ag1" => ag1, "ag2" => ag2, "ag3" => ag3, "ag4" => ag4, "ag5" => ag5, "ag6" => ag6, "ag7" => ag7, "working"=>working)
+    mydfs = Dict("all" => allag, "ag1" => ag1, "ag2" => ag2, "ag3" => ag3, "ag4" => ag4, "ag5" => ag5, "ag6" => ag6, "ag7" => ag7,"ag8" => ag8,
+    "ag9" => ag9,"ag10" => ag10, "working"=>working)
     #mydfs = Dict("all" => allag, "working"=>working, "kids"=>kids)
     #mydfs = Dict("all" => allag)
     
@@ -180,8 +184,8 @@ end
 function create_folder(ip::cv.ModelParameters,province="usa",calibrating = true,letter = "A")
     
     #RF = string("heatmap/results_prob_","$(replace(string(ip.β), "." => "_"))","_vac_","$(replace(string(ip.vaccine_ef), "." => "_"))","_herd_immu_","$(ip.herd)","_$strategy","cov_$(replace(string(ip.cov_val)))") ## 
-    main_folder = "/data/thomas-covid/USbooster_scenarios"
-    #main_folder = "."
+    #main_folder = "/data/thomas-covid/USbooster_scenarios"
+    main_folder = "."
     if calibrating
         RF = string(main_folder,"/results_prob_","$(replace(string(ip.β), "." => "_"))","_$(ip.file_index)_$(letter)_$(province)") ##  
     else
