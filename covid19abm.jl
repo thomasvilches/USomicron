@@ -330,6 +330,8 @@ function runsim(simnum, ip::ModelParameters)
     ## Checking the size of the population eligible to vaccination considering 5+
     n5plus = count(x-> x.age >= 5, humans)
 
+    vage = map(x-> length(findall(y-> y.age in x, humans)), age_groups)
+
     return (lat=lat, hos=hos, icu=icu, ded=ded, lat2=lat2, hos2=hos2, icu2=icu2, ded2=ded2, lat3=lat3, hos3=hos3, icu3=icu3, ded3=ded3, lat4=lat4, hos4=hos4, icu4=icu4, ded4=ded4, lat5=lat5, hos5=hos5, icu5=icu5, ded5=ded5, lat6=lat6, hos6=hos6, icu6=icu6, ded6=ded6, lat7=lat7, hos7=hos7, icu7=icu7, ded7=ded7, lat8=lat8, hos8=hos8, icu8=icu8, ded8=ded8,
     a=all, g1=ag1, g2=ag2, g3=ag3, g4=ag4, g5=ag5, g6=ag6,g7=ag7,g8=ag8, g9=ag9,g10=ag10, work = work,
     cov1 = coverage1,cov2 = coverage2,cov12 = coverage12,cov22 = coverage22,vector_dead=vector_ded,
@@ -337,7 +339,7 @@ function runsim(simnum, ip::ModelParameters)
     n_pfizer_2 = n_pfizer_2, n_moderna_2 = n_moderna_2, n_jensen_2 = n_jensen_2, n_pfizer_w_2 = n_pfizer_w_2, n_moderna_w_2 = n_moderna_w_2, n_jensen_w_2 = n_jensen_w_2, 
     n_pfizer_3 = n_pfizer_3, n_moderna_3 = n_moderna_3, n_jensen_3 = n_jensen_3, n_pfizer_w_3 = n_pfizer_w_3, n_moderna_w_3 = n_moderna_w_3, n_jensen_w_3 = n_jensen_w_3, 
     n_pfizer_4 = n_pfizer_4, n_moderna_4 = n_moderna_4, n_jensen_4 = n_jensen_4, n_pfizer_w_4 = n_pfizer_w_4, n_moderna_w_4 = n_moderna_w_4, n_jensen_w_4 = n_jensen_w_4, 
-    remaining = remaining_doses, total_given = total_given, nvacgiven = nvacgiven, n5plus = n5plus)
+    remaining = remaining_doses, total_given = total_given, nvacgiven = nvacgiven, n5plus = n5plus, vage = vage)
 end
 export runsim
 
