@@ -431,9 +431,11 @@ function main(ip::ModelParameters,sim::Int64)
     
   
 
-   
-    vac_ind::Vector{Vector{Int64}} = vac_selection(sim,16,agebraks_vac)
-   
+    if p.vaccinating
+        vac_ind::Vector{Vector{Int64}} = vac_selection(sim,16,agebraks_vac)
+    else
+        time_vac::Int64 = 99999
+    end
 
     vtimes = [1;p.time_sec_strain;p.time_third_strain;p.time_fourth_strain;p.time_fifth_strain;p.time_sixth_strain;p.modeltime[1]+1]
     vorder = map(y-> y,1:length(vtimes))
