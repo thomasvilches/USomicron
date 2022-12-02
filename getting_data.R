@@ -3,7 +3,7 @@ library(dplyr)
 library(stringr)
 library(ggplot2)
 theme_set(theme_bw())
-enddate=as.Date("2022-08-30")#as.Date("2022-01-31")
+enddate=as.Date("2022-11-30")#as.Date("2022-01-31")
 startvacdate = as.Date("2020-12-12")
 
 population = 332968798
@@ -14,8 +14,6 @@ download.file("https://raw.githubusercontent.com/nytimes/covid-19-data/master/us
 data.cases <- read.csv(temp,h=T,stringsAsFactors = F)
 unlink(temp)
 rm(temp)
-
-
 head(data.cases)
 ignore_states = c("Virgin Islands","Guam","Puerto Rico","Northern Mariana Islands","American Samoa")
 data.cases %>% filter(!(state %in% ignore_states)) %>% select(state) %>% unique() %>% pull(state) %>% length()
@@ -57,6 +55,8 @@ library(dplyr)
 library(ggplot2)
 
 ### https://data.cdc.gov/Vaccinations/COVID-19-Vaccination-Demographics-in-the-United-St/km4m-vcsb
+### https://data.cdc.gov/Vaccinations/COVID-19-Vaccination-Trends-in-the-United-States-N/rh2h-3yt2
+
 data = read.csv("../COVID-19_Vaccination_Demographics_in_the_United_States_National.csv")
 head(data)
 
@@ -80,7 +80,7 @@ data = data %>% filter(Demographic_category %in% field_correct) %>% mutate(Date 
 head(data)
 
 
-ggplot()+geom_line(data = data, aes(x = Date,y=Administered_Dose1,color = Demographic_category))
+ggplot()+geom_line(data = data, aes(x = Date,y = Administered_Dose1,color = Demographic_category))
 
 nr = length(unique(data$Date))
 nr
@@ -103,7 +103,7 @@ head(m1)
 m = round(m1/population*100000)
 head(m)
 
-write.table(m,"dose_1_us_aug.dat",col.names = F,row.names = F)
+write.table(m, "dose_1_us_dez.dat", col.names = F, row.names = F)
 
 
 df = stack(as.data.frame(m1))
@@ -134,7 +134,7 @@ head(m1)
 m = round(m1/population*100000)
 head(m)
 
-write.table(m,"../dose_2_us_aug.dat",col.names = F,row.names = F)
+write.table(m,"../dose_2_us_dez.dat",col.names = F,row.names = F)
 
 
 df2 = stack(as.data.frame(m1))
@@ -162,54 +162,18 @@ v = min(data$Date)+seq(0,nrow(m1)-1)
 sum(m1[v == as.Date("2021-11-19"),])
 
 
-#############################
-#### hospitalization
-### https://healthdata.gov/Hospital/COVID-19-Reported-Patient-Impact-and-Hospital-Capa/g62h-syeh
-library(zoo)
-#setwd("~/PosDoc/Coronavirus/USomicron/")
-data.hos = read.csv("../COVID-19_Reported_Patient_Impact_and_Hospital_Capacity_by_State_Timeseries.csv")
-head(data.hos)
-data.hos = data.hos[,c("state","date","previous_day_admission_adult_covid_confirmed","previous_day_admission_pediatric_covid_confirmed")]
-head(data.hos)
-na.fill(data.hos,as.numeric(0))
-
-data.hos
-unique(data.hos$state)
-
-data.hos2 = data.hos %>% mutate(date = as.Date(date,"%Y/%m/%d")) %>%
-  filter(date>=startvacdate,date<=enddate) %>% filter(!(state %in% c("PR","VI","AS")) ) %>% 
-  group_by(state) %>% 
-  summarise(hos_adult = sum(previous_day_admission_adult_covid_confirmed,na.rm=TRUE),
-            hos_pediatric = sum(previous_day_admission_pediatric_covid_confirmed,na.rm=TRUE),
-            hos = sum(previous_day_admission_adult_covid_confirmed+previous_day_admission_pediatric_covid_confirmed,na.rm=TRUE))
-
-data.hos2
-sum(data.hos2$hos)
-
-state_name = read.csv("PO-code.csv",sep = ";")
-data.hos2 = left_join(data.hos2,state_name,by="state") %>% rename(statePO = state,State = Name)
-
-df = left_join(df,data.hos2,by="State")
-df = df %>% mutate(Ratio.hos = hos/cases.state)
-
-
-pop = read.csv("NST-EST2021-POP.csv",sep = ";",h=F) %>% rename(state = V1,Pop2020=V2,PopEst=V3) %>%
-  mutate(state = str_remove(state,"."),Pop2020 = str_remove_all(Pop2020,",")) %>% mutate(Pop2020 = as.numeric(Pop2020)) %>% 
-  select(state,Pop2020) %>% rename(State = state)
-
-pop
-
- df = left_join(df,pop,by = "State")
-
-write.csv(df,"DeathFactors.csv",row.names=F)
-
-
 
 # Cases, Deaths,  Vaccination and Hospitalization -------------------------
 #################################################################
 #setwd("~/PosDoc/Coronavirus/USomicron/")
 ### https://covid.cdc.gov/covid-data-tracker/#vaccination-trends
 #need to remove lines from header
+
+
+## There is a problem here because on December 01 they removed the previous information about first and second booster
+# So, we will go back to one single vector for booster and people may take one or two of them
+
+
 data_boost = read.csv("../trends_in_number_of_covid19_vaccinations_in_the_us_firstbooster.csv")
 
 data_boost = data_boost %>% #filter(Date.Type == "Admin") %>% 
@@ -251,9 +215,13 @@ ggplot()+geom_col(data=aux,aes(x=Date,y=Booster))+geom_hline(yintercept = aa)
 
 ##############################3
 #
+#############################
+#### hospitalization
+### https://healthdata.gov/Hospital/COVID-19-Reported-Patient-Impact-and-Hospital-Capa/g62h-syeh
+
 
 #############################
-#### hospoitalization
+#### hospitalization
 ### https://healthdata.gov/Hospital/COVID-19-Reported-Patient-Impact-and-Hospital-Capa/g62h-syeh
 library(zoo)
 

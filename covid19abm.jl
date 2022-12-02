@@ -129,6 +129,7 @@ end
     reduction_omicron::Float64 = 0.6 ##not using
     #=------------ Vaccine Efficacy ----------------------------=#
     booster_after::Array{Int64,1} = [180;180;9999]
+    #### Change this to 60 days after august
     booster_after_bkup::Array{Int64,1} = [150;150;9999]
     change_booster_eligibility::Int64 = 490
     date_octuber::Int16 = 761
