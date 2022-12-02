@@ -2,6 +2,7 @@ setwd("D:/PosDoc/Coronavirus/USomicron/USomicron/")
 library(dplyr)
 library(stringr)
 library(ggplot2)
+library(lubridate)
 theme_set(theme_bw())
 enddate=as.Date("2022-11-30")#as.Date("2022-01-31")
 startvacdate = as.Date("2020-12-12")
@@ -55,7 +56,6 @@ library(dplyr)
 library(ggplot2)
 
 ### https://data.cdc.gov/Vaccinations/COVID-19-Vaccination-Demographics-in-the-United-St/km4m-vcsb
-### https://data.cdc.gov/Vaccinations/COVID-19-Vaccination-Trends-in-the-United-States-N/rh2h-3yt2
 
 data = read.csv("../COVID-19_Vaccination_Demographics_in_the_United_States_National.csv")
 head(data)
@@ -167,6 +167,7 @@ sum(m1[v == as.Date("2021-11-19"),])
 #################################################################
 #setwd("~/PosDoc/Coronavirus/USomicron/")
 ### https://covid.cdc.gov/covid-data-tracker/#vaccination-trends
+
 #need to remove lines from header
 
 
@@ -213,8 +214,68 @@ ggplot()+geom_col(data=aux,aes(x=Date,y=Booster))+geom_hline(yintercept = aa)
 
 
 
+
+
+
 ##############################3
-#
+# 
+
+### https://data.cdc.gov/Vaccinations/COVID-19-Vaccination-Trends-in-the-United-States-N/rh2h-3yt2
+
+# We decided to add up the Booster and Bivalent and use it after bivalent came up as a unique vector
+# Whoever is eligible, will take it
+
+
+data_boost = read.csv("../COVID-19_Vaccination_Trends_in_the_United_States_National_and_Jurisdictional.csv")
+
+not_want = c("MH", "PR", "GU", "MP", "US", "PW", "FM", "HI", "AS")
+
+df = data_boost %>% filter(!(Location %in% not_want), date_type == "Admin") %>%
+  mutate(Date = mdy(Date)) %>%
+  group_by(Date) %>%
+  summarise(booster = sum(Booster_Daily), sec_boost_50 = sum(Second_Booster_50Plus_Daily),
+            biv_boost = sum(Bivalent_Booster_Daily), state = paste0(Location, collapse = "; "))
+
+df %>% View
+
+df %>% group_by(Date) %>% summarise(tt = sum(booster))
+
+df$m7biv = frollmean(df$biv_boost, 7, align = "right")
+
+ggplot(df)+geom_line(aes(Date, biv_boost, color = "Bivalent"))+
+  geom_line(aes(Date, sec_boost_50, color = "Sec booster 50+"))+
+  geom_line(aes(Date, booster, color = "Booster"))+
+  geom_line(aes(Date, m7biv, color = "mean"), size = 1.5)+
+  scale_x_date(limits = as.Date(c("2022-06-01", "2022-12-01")))+
+  scale_y_continuous(limits = c(0, 1000000))+
+  scale_color_manual(values = c("black", "blue", "red", "purple"))
+
+
+
+df$soma = df$booster+df$biv_boost
+df$m7biv = frollmean(df$soma, 7, align = "right")
+
+ggplot(df)+#geom_line(aes(Date, biv_boost, color = "Bivalent"))+
+  geom_line(aes(Date, sec_boost_50, color = "Sec booster 50+"))+
+  geom_line(aes(Date, soma, color = "Sum"))+
+  geom_line(aes(Date, m7biv, color = "mean"), size = 1.5)+
+  scale_x_date(limits = as.Date(c("2022-06-01", "2022-12-01")))+
+  scale_y_continuous(limits = c(0, 1000000))+
+  scale_color_manual(values = c("black", "blue", "red", "purple"))
+
+
+
+
+df = df %>% mutate(soma100 = soma*100000/population, sec_boost50_100 = sec_boost_50*100000/population)
+
+
+write.table(c(0,df$soma100),"../booster1_dez.dat",row.names = F,col.names = F)
+
+write.table(c(0,df$sec_boost50_100),"../booster2_dez.dat",row.names = F,col.names = F)
+
+
+
+
 #############################
 #### hospitalization
 ### https://healthdata.gov/Hospital/COVID-19-Reported-Patient-Impact-and-Hospital-Capa/g62h-syeh
@@ -280,7 +341,7 @@ head(data.cases)
 
 
 
-write.csv(data.cases,"../data_us_aug.csv",row.names=F)
+write.csv(data.cases,"../data_us_dez.csv",row.names=F)
 
 
 
