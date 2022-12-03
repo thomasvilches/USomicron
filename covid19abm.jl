@@ -126,13 +126,15 @@ end
     vac_period::Array{Int64,1} = [21;28;9999]
     n_boosts::Int64 = 1
     min_age_booster::Int64 = 16
+    #min_age_booster_sept::Int64 = 12 
     reduction_omicron::Float64 = 0.6 ##not using
     #=------------ Vaccine Efficacy ----------------------------=#
     booster_after::Array{Int64,1} = [180;180;9999]
     #### Change this to 60 days after august
-    booster_after_bkup::Array{Int64,1} = [150;150;9999]
-    change_booster_eligibility::Int64 = 490
-    date_octuber::Int16 = 761
+    booster_after_bkup::Array{Int64,1} = [[150;150;9999], [60; 60; 9999]]
+    change_booster_eligibility::Int64 = [490; 731]
+    date_sept::Int16 = 731
+    date_sept2::Int16 = 773
     #=------------ Vaccine Efficacy ----------------------------=#
     days_to_protection::Array{Array{Array{Int64,1},1},1} = [[[14;21],[0;7]],[[14;21],[0;7]],[[14]]]
     vac_efficacy_inf::Array{Array{Array{Array{Float64,1},1},1},1} = [[[[0.46;0.46],[0.46;0.861]],[[0.295;0.295],[0.295;0.895]],[[0.368;0.368],[0.368;0.75]],[[0.416;0.416],[0.416;0.85]],[[0.46;0.46],[0.46;0.861]],[[0.16;0.16],[0.16;0.33]]],#booster efficacy  for omicron changed in vac_time function
@@ -444,6 +446,7 @@ function main(ip::ModelParameters,sim::Int64)
     perm = perm[1:findfirst(y-> y == length(vtimes),perm)]
     vv = vorder[perm]
     # start the time loop
+    elig_idx::Int16 = 1
 
     initinfvector::Vector{Int64} = [p.initialinf;p.initialinf2;p.initialinf3;p.initialinf4;p.initialinf5;p.initialinf6]
     ## vaccinate up to modeltime[1] with normal rates
@@ -470,8 +473,9 @@ function main(ip::ModelParameters,sim::Int64)
             
             end
             
-            if st == p.change_booster_eligibility
-                p.booster_after = deepcopy(p.booster_after_bkup)
+            if st == p.change_booster_eligibility[elig_idx]
+                p.booster_after = deepcopy(p.booster_after_bkup[elig_idx])
+                elig_idx += 1
             end
             # start of day
             #println("$st")
@@ -498,10 +502,14 @@ function main(ip::ModelParameters,sim::Int64)
 
             time_vac += 1
             if time_pos > 0
-                if st < p.date_octuber
+                
+                
+                if st < p.date_sept
                     aux_ =  vac_time!(sim,vac_ind,time_pos+1,vac_rate_1,vac_rate_2,vac_rate_booster, vac_rate_booster2)
+                elseif st < p.date_sept2
+                    aux_ =  vac_time_sept!(sim,vac_ind,time_pos+1,vac_rate_1,vac_rate_2,vac_rate_booster, vac_rate_booster2, 12)
                 else
-                    aux_ =  vac_time_oct!(sim,vac_ind,time_pos+1,vac_rate_1,vac_rate_2,vac_rate_booster, vac_rate_booster2)
+                    aux_ =  vac_time_sept!(sim,vac_ind,time_pos+1,vac_rate_1,vac_rate_2,vac_rate_booster, vac_rate_booster2, 5)
                 end
                 remaining_doses += aux_[1]
                 total_given += aux_[2]
@@ -1192,7 +1200,8 @@ function vac_time!(sim::Int64,vac_ind::Vector{Vector{Int64}},time_pos::Int64,vac
 
 end
 
-function vac_time_oct!(sim::Int64,vac_ind::Vector{Vector{Int64}},time_pos::Int64,vac_rate_1::Matrix{Int64},vac_rate_2::Matrix{Int64},vac_rate_booster::Vector{Int64},vac_rate_booster2::Vector{Int64})
+#What changes here is that after september, we don't care if the individual is taking first or second booster, we just give it
+function vac_time_sept!(sim::Int64,vac_ind::Vector{Vector{Int64}},time_pos::Int64,vac_rate_1::Matrix{Int64},vac_rate_2::Matrix{Int64},vac_rate_booster::Vector{Int64},vac_rate_booster2::Vector{Int64}, age_vac_booster::Int64)
     aux_states = (MILD, MISO, INF, IISO, HOS, ICU, DED)
     ##first dose
    # rng = MersenneTwister(123*sim)
@@ -1427,8 +1436,13 @@ function vac_time_oct!(sim::Int64,vac_ind::Vector{Vector{Int64}},time_pos::Int64
 
    
     ### Let's add booster... those are extra doses, we don't care about missing doses
-
-    pos = findall(y-> y.vac_status == 2 && y.days_vac >= 120 && y.age >= p.min_age_booster && y.n_boosted < 1 && !(y.health_status in aux_states),humans)
+    # Let's find all who is eligible for first booster
+    pos1 = findall(y-> y.vac_status == 2 && y.days_vac >= p.booster_after[y.vaccine_n] && y.age >= age_vac_booster && y.n_boosted < 1 && !(y.health_status in aux_states),humans)
+    
+    # And all who is eligible for second booster but is 50- (50+ is given in the next step)
+    pos2 = findall(y-> y.vac_status == 2 && y.days_vac >= p.booster_after[y.vaccine_n] && y.age >= age_vac_booster && y.age < 50 && y.n_boosted < 2 &&  && !(y.health_status in aux_states),humans)
+    
+    pos = [pos1; pos2]
     remaining_doses = vac_rate_booster[time_pos]+remaining_doses
     l2 = min(remaining_doses,length(pos))
     pos = sample(pos,l2,replace=false)
@@ -1443,10 +1457,9 @@ function vac_time_oct!(sim::Int64,vac_ind::Vector{Vector{Int64}},time_pos::Int64
         remaining_doses -= 1
         #### ADD here the new vaccine efficacy against Omicron for booster
         
-        x.vac_eff_inf[6][2][end] = p.new_vaccine_efficacy[x.vaccine_n][1]
-        x.vac_eff_symp[6][2][end] = p.new_vaccine_efficacy[x.vaccine_n][2]
-        x.vac_eff_sev[6][2][end] = p.new_vaccine_efficacy[x.vaccine_n][3]
-
+        x.vac_eff_inf[6][2][end] = [0.76;0.677][x.vaccine_n]
+        x.vac_eff_symp[6][2][end] = 0.82
+        x.vac_eff_sev[6][2][end] = 0.90
         #moderna has a different value against Delta for booster
         x.vac_eff_inf[4][2][end] = [x.vac_eff_inf[4][2][end]; 0.94][x.vaccine_n]
 
@@ -1471,8 +1484,8 @@ function vac_time_oct!(sim::Int64,vac_ind::Vector{Vector{Int64}},time_pos::Int64
         end
     end
 
-    ### In Octuber, we can give 2nd booster for everybody
-    pos = findall(y-> y.vac_status == 2 && y.days_vac >= 120 && y.age >= 5 && y.n_boosted == 1 && !(y.health_status in aux_states),humans)
+    ### adding second booster - only for 50+
+    pos = findall(y-> y.vac_status == 2 && y.days_vac >= p.booster_after[y.vaccine_n] && y.age >= 50 && y.n_boosted == 1 && !(y.health_status in aux_states),humans)
 
     l2 = min(vac_rate_booster2[time_pos],length(pos))
     pos = sample(pos,l2,replace=false)
@@ -1486,10 +1499,9 @@ function vac_time_oct!(sim::Int64,vac_ind::Vector{Vector{Int64}},time_pos::Int64
         nvacgiven += 1
         #### ADD here the new vaccine efficacy against Omicron for booster
             
-        x.vac_eff_inf[6][2][end] = p.new_vaccine_efficacy[x.vaccine_n][1]
-        x.vac_eff_symp[6][2][end] = p.new_vaccine_efficacy[x.vaccine_n][2]
-        x.vac_eff_sev[6][2][end] = p.new_vaccine_efficacy[x.vaccine_n][3]
-
+        x.vac_eff_inf[6][2][end] = [0.76;0.677][x.vaccine_n]
+        x.vac_eff_symp[6][2][end] = 0.82
+        x.vac_eff_sev[6][2][end] = 0.90
         #moderna has a different value against Delta for booster
         x.vac_eff_inf[4][2][end] = [x.vac_eff_inf[4][2][end]; 0.94][x.vaccine_n]
 

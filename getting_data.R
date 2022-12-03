@@ -3,9 +3,12 @@ library(dplyr)
 library(stringr)
 library(ggplot2)
 library(lubridate)
+library(data.table)
 theme_set(theme_bw())
 enddate=as.Date("2022-11-30")#as.Date("2022-01-31")
 startvacdate = as.Date("2020-12-12")
+basedate
+
 
 population = 332968798
 # Deaths per state --------------------------------------------------------
@@ -103,7 +106,7 @@ head(m1)
 m = round(m1/population*100000)
 head(m)
 
-write.table(m, "dose_1_us_dez.dat", col.names = F, row.names = F)
+write.table(m, "../dose_1_us_dez.dat", col.names = F, row.names = F)
 
 
 df = stack(as.data.frame(m1))
@@ -261,12 +264,13 @@ ggplot(df)+#geom_line(aes(Date, biv_boost, color = "Bivalent"))+
   geom_line(aes(Date, m7biv, color = "mean"), size = 1.5)+
   scale_x_date(limits = as.Date(c("2022-06-01", "2022-12-01")))+
   scale_y_continuous(limits = c(0, 1000000))+
-  scale_color_manual(values = c("black", "blue", "red", "purple"))
+  scale_color_manual(values = c("black", "blue", "red", "purple"))+
+  geom_vline(aes(xintercept = as.Date("2022-08-30")))
 
 
 
 
-df = df %>% mutate(soma100 = soma*100000/population, sec_boost50_100 = sec_boost_50*100000/population)
+df = df %>% mutate(soma100 = round(soma*100000/population), sec_boost50_100 = round(sec_boost_50*100000/population))
 
 
 write.table(c(0,df$soma100),"../booster1_dez.dat",row.names = F,col.names = F)
