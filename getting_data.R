@@ -7,7 +7,7 @@ library(data.table)
 theme_set(theme_bw())
 enddate=as.Date("2022-11-30")#as.Date("2022-01-31")
 startvacdate = as.Date("2020-12-12")
-basedate
+basedate = as.Date("2020-09-01")
 
 
 population = 332968798

@@ -131,8 +131,8 @@ end
     #=------------ Vaccine Efficacy ----------------------------=#
     booster_after::Array{Int64,1} = [180;180;9999]
     #### Change this to 60 days after august
-    booster_after_bkup::Array{Int64,1} = [[150;150;9999], [60; 60; 9999]]
-    change_booster_eligibility::Int64 = [490; 731]
+    booster_after_bkup::Array{Array{Int64,1}} = [[150;150;9999], [60; 60; 9999]]
+    change_booster_eligibility::Array{Int64,1} = [490; 731;999999]
     date_sept::Int16 = 731
     date_sept2::Int16 = 773
     #=------------ Vaccine Efficacy ----------------------------=#
@@ -149,7 +149,6 @@ end
     [[[0.66;0.7],[0.7,0.97]],[[0.8;0.82],[0.82,0.95]],[[0.88;0.95],[0.95;0.95]],[[0.9;0.91],[0.91,0.98]],[[0.66;0.7],[0.7,0.97]],[[0.744;0.744],[0.744,0.81]]],#### 50:5:80
     [[[0.921]],[[0.816]],[[0.34]],[[0.781]],[[0.921]],[[0.34]]]]#### 50:5:80
 
-    new_vaccine_efficacy::Vector{Vector{Float64}} = [[0.81, 0.875, 0.94], [0.82,0.89,0.935]]
     # ----- Recovery efficacy ----- #
     #https://www.nejm.org/doi/full/10.1056/NEJMc2200133
     # using infection the same as symptoms
@@ -185,7 +184,6 @@ end
 
     scenario::Int16 = 1
     time_horizon::Int16 = 941
-    intervention_prob::Vector{Float16} = [0.8;0.8;0.8;0.8;0.8]
     age_groups_vac::Vector{UnitRange{Int64}} = [5:11,12:17,18:49,50:64,65:100]
 
     #one waning rate for each efficacy? For each strain? I can change this structure based on that
@@ -437,7 +435,7 @@ function main(ip::ModelParameters,sim::Int64)
     if p.vaccinating
         vac_ind::Vector{Vector{Int64}} = vac_selection(sim,16,agebraks_vac)
     else
-        time_vac::Int64 = 99999
+        time_vac = 99999
     end
 
     vtimes = [1;p.time_sec_strain;p.time_third_strain;p.time_fourth_strain;p.time_fifth_strain;p.time_sixth_strain;p.modeltime[1]+1]
@@ -558,323 +556,6 @@ function vac_selection(sim::Int64,age::Int64,agebraks_vac)
     return v
 end
 
-function calc_rates(sim,time_horizon)
-    
-    if p.scenario == 1
-        ind1 = findall(x-> x.age in 5:17 && x.vac_status == 0 && x.health_status != DED, humans)
-        ind2 = findall(x-> x.age in 5:17 && x.vac_status == 1 && x.health_status != DED, humans)
-        indb = findall(x-> x.age in 5:17 && x.health_status != DED && x.vac_status == 2 && !x.boosted && x.days_vac >= 120, humans)
-        indb = [indb]
-    elseif p.scenario == 2
-        ind1 = []
-        ind2 = []
-        #indb = map(kk-> findall(x-> x.age in 50:100 && x.health_status != DED && x.vac_status == 2 && x.n_boosted == kk-1 && x.days_vac >= p.booster_after[x.vaccine_n], humans),1:2)
-        indb1 = findall(x-> x.age in 50:100 && x.health_status != DED && x.vac_status == 2 && !x.boosted, humans)
-        indb2 = findall(x-> x.age in 50:100 && x.health_status != DED && x.vac_status == 2 && x.n_boosted == 1 && x.days_vac >= 120, humans)
-        indb = [indb1,indb2]
-    elseif p.scenario == 3
-        ind1 = []
-        ind2 = []
-        #indb = map(kk-> findall(x-> x.age in 50:100 && x.health_status != DED && x.vac_status == 2 && x.n_boosted == kk-1 && x.days_vac >= p.booster_after[x.vaccine_n], humans),1:2)
-        indb1 = findall(x-> x.age in 18:100 && x.health_status != DED && x.vac_status == 2 && !x.boosted, humans)
-        indb2 = findall(x-> x.age in 18:100 && x.health_status != DED && x.vac_status == 2 && x.n_boosted == 1 && x.days_vac >= 120, humans)
-        indb = [indb1,indb2]
-    elseif p.scenario == 4
-        ind1 = Int[]#findall(x-> x.age in 5:100 && x.vac_status == 0 && x.health_status != DED, humans)
-        ind2 = Int[]#findall(x-> x.age in 5:100 && x.vac_status == 1 && x.health_status != DED, humans)
-        indb1 = findall(x-> x.age in 5:100 && x.health_status != DED && x.vac_status == 2 && !x.boosted && x.days_vac >= 120, humans)
-        indb2 = findall(x-> x.age in 18:100 && x.health_status != DED && x.vac_status == 2 && x.n_boosted == 1 && x.days_vac >= 120, humans)
-        #indb = [indb1,indb2]
-    elseif p.scenario == 5
-        ind1 = Int[]#findall(x-> x.age in 5:100 && x.vac_status == 0 && x.health_status != DED, humans)
-        ind2 = Int[]#findall(x-> x.age in 5:100 && x.vac_status == 1 && x.health_status != DED, humans)
-        indb1 = findall(x-> x.age in 5:100 && x.health_status != DED && x.vac_status == 2 && !x.boosted && x.days_vac >= 120, humans)
-        indb2 = findall(x-> x.age in 18:100 && x.health_status != DED && x.vac_status == 2 && x.n_boosted == 1 && x.days_vac >= 120, humans)
-        #indb = [indb1,indb2]
-    elseif p.scenario == 0
-        ind1 = []
-        ind2 = []
-        indb1 = Int[]
-        indb2 = Int[]
-        indb = []
-    elseif p.scenario == 999
-        ind1 = []
-        ind2 = []
-        indb = []
-    else
-        error("no scenario")
-    end
-
-    if length(ind1) > 0
-        
-        ind1 = map(y->get_sample(1,sim,ind1,y),1:length(p.age_groups_vac))
-        ind1 = vcat(ind1...)
-    end
-
-    if length(ind2) > 0
-        
-        ind2 = map(y->get_sample(2,sim,ind2,y),1:length(p.age_groups_vac))
-        ind2 = vcat(ind2...)
-    end
-
-    #we need to do this before sampling... to avoid vaccinating a lot of people at once
-    for ii in vcat(indb1,indb2)
-        humans[ii].tested = true
-    end
-
-    if length(indb1) > 0
-        indb1 = map(y->get_sample(3,sim,indb1,y),1:length(p.age_groups_vac))
-    end
-
-
-    if length(indb2) > 0
-        indb2 = map(y->get_sample(4,sim,indb2,y),1:length(p.age_groups_vac))
-    end
-
-    indb = [vcat(indb1...),vcat(indb2...)]
-    r1 = Int(ceil(length(ind1)/(time_horizon-p.vac_period[2])))
-    r2 = Int(ceil(length(ind2)/(time_horizon)))
-    rb = Int(ceil(length(vcat(indb...))/time_horizon))
-
-    return ind1,ind2,indb,r1,r2,rb
-end
-
-function get_sample(idx,sim,xv,ag)
-    rng = MersenneTwister(192*sim*idx*ag)
-    xpos = findall(y-> humans[y].age in p.age_groups_vac[ag],xv)
-    nn = Int(round(length(xv[xpos])*p.intervention_prob[ag]))
-    if nn > 0
-        xs = sample(rng,xv[xpos],nn,replace=false)
-    else
-        xs = Int[]
-    end
-    return xs
-end
-
-
-function vac_time_extra!(sim::Int64,st::Int64,ind1,ind2,indb,r1::Int64,r2::Int64,rb::Int64)
-    aux_states = (MILD, MISO, INF, IISO, HOS, ICU, DED)
-    nvacgiven::Int64  = 0
-    ##first dose
-    rng = MersenneTwister(146*sim*st)
-    ### lets create distribute the number of doses per age group
-    ## Let's vaccinate the first dose
-
-    pos = findall(y-> humans[y].vac_status == 0 && !(humans[y].health_status in aux_states),ind1)
-    l1 = min(r1,length(pos))
-   
-    if l1 > 0
-        pos2 = sample(rng,pos,l1,replace=false)
-
-        for ii in ind1[pos2]
-            x = humans[ii]
-            x.days_vac = 0
-            x.vac_status = 1
-            x.index_day = 1
-            x.vaccine_n = x.age < 18 ? 1 : sample([1,2,3], Weights(p.vaccine_proportion/sum(p.vaccine_proportion)))
-            x.vaccine = [:pfizer;:moderna;:jensen][x.vaccine_n]
-            
-            x.vac_eff_inf = deepcopy(p.vac_efficacy_inf[x.vaccine_n])
-            x.vac_eff_symp = deepcopy(p.vac_efficacy_symp[x.vaccine_n])
-            x.vac_eff_sev = deepcopy(p.vac_efficacy_sev[x.vaccine_n])
-
-
-            if x.recovered
-                index = Int(floor(x.days_recovered/7))
-
-                if index > 0
-                    if index <= size(waning_factors_rec,1)
-                        aux = waning_factors_rec[index,1]
-                    else
-                        aux = waning_factors_rec[end,1]
-                    end
-                else
-                    aux = 1.0
-                end
-
-                if aux > x.vac_eff_inf[1][x.vac_status][end]
-                    x.recvac = 1
-                else
-                    x.recvac = 2
-                end
-            end
-        end
-
-    end
-
-    # now, let's vaccinate the second doses. We will vaccinate the ones who got first dose
-
-    #first, let's focus on completing the scheme for the ones who already have the first dose
-    pos = findall(y-> humans[y].vac_status == 1 && humans[y].days_vac >= p.vac_period[humans[y].vaccine_n] && !(humans[y].health_status in aux_states),ind2)
-    l1 = min(r2,length(pos))
-    if l1 > 0
-        pos2 = sample(rng,pos,l1,replace=false)
-
-        for ii in ind2[pos2]
-            x = humans[ii]
-            x.days_vac = 0
-            x.vac_status = 2
-            x.index_day = 1
-            
-            if x.recovered
-                index = Int(floor(x.days_recovered/7))
-
-                if index > 0
-                    if index <= size(waning_factors_rec,1)
-                        aux = waning_factors_rec[index,1]
-                    else
-                        aux = waning_factors_rec[end,1]
-                    end
-                else
-                    aux = 1.0
-                end
-
-                if aux > x.vac_eff_inf[1][x.vac_status][end]
-                    x.recvac = 1
-                else
-                    x.recvac = 2
-                end
-            end
-        end
-    end
-
-    # Now, let's vaccinate the individuals who got first dose and now are eligible for second dose
-    pos = findall(y-> humans[y].vac_status == 1 && humans[y].days_vac >= p.vac_period[humans[y].vaccine_n] && !(humans[y].health_status in aux_states),ind1)
-    l1 = length(pos)
-    if l1 > 0
-        pos2 = sample(rng,pos,l1,replace=false)
-
-        for ii in ind1[pos2]
-            x = humans[ii]
-            x.days_vac = 0
-            x.vac_status = 2
-            x.index_day = 1
-            
-            if x.recovered
-                index = Int(floor(x.days_recovered/7))
-
-                if index > 0
-                    if index <= size(waning_factors_rec,1)
-                        aux = waning_factors_rec[index,1]
-                    else
-                        aux = waning_factors_rec[end,1]
-                    end
-                else
-                    aux = 1.0
-                end
-
-                if aux > x.vac_eff_inf[1][x.vac_status][end]
-                    x.recvac = 1
-                else
-                    x.recvac = 2
-                end
-            end
-        end
-    end
-   
-    ### Let's add booster...
-
-    # In this commit we are considering that the vaccine that is given after octuber is made against Omicron
-
-    pos = map(y-> findall(xx-> humans[xx].vac_status == 2 && humans[xx].n_boosted < y && !(humans[xx].health_status in aux_states),indb[y]),1:length(indb))
-
-    pos = map(y-> indb[y][pos[y]],1:length(pos)) 
-    pos = vcat(pos...)
-    l2 = min(rb,length(pos))
-    if l2 > 0
-        pos = sample(rng,pos,l2,replace=false)
-        for i in pos
-            nvacgiven += 1
-            x = humans[i]
-            x.days_vac = 0
-            x.index_day = 1
-            x.boosted = true
-            x.tested = false
-            x.n_boosted += 1
-            #### ADD here the new vaccine efficacy against Omicron for booster
-                
-            x.vac_eff_inf[6][2][end] = p.new_vaccine_efficacy[x.vaccine_n][1]
-            x.vac_eff_symp[6][2][end] = p.new_vaccine_efficacy[x.vaccine_n][2]
-            x.vac_eff_sev[6][2][end] = p.new_vaccine_efficacy[x.vaccine_n][3]
-
-            # we don't  really care about the other ones at this point
-            #moderna has a different value against Delta for booster
-            x.vac_eff_inf[4][2][end] = [x.vac_eff_inf[4][2][end]; 0.94][x.vaccine_n]
-
-            if x.recovered
-                index = Int(floor(x.days_recovered/7))
-
-                if index > 0
-                    if index <= size(waning_factors_rec,1)
-                        aux = waning_factors_rec[index,1]
-                    else
-                        aux = waning_factors_rec[end,1]
-                    end
-                else
-                    aux = 1.0
-                end
-
-                if aux > x.vac_eff_inf[1][x.vac_status][end]
-                    x.recvac = 1
-                else
-                    x.recvac = 2
-                end
-            end
-        end
-    end
-
-
-    ### Let's add booster to those ones who become eligible!
-    #max_boost = [0;1;2;2][p.scenario+1]
-    age_boost = [0:0,5:17,50:100,18:100,5:100,5:100][p.scenario+1]
-    pos = findall(xx-> xx.age in age_boost && xx.vac_status == 2 && xx.n_boosted < xx.max_boost && xx.days_vac >= 120 && !xx.tested && !(xx.health_status in aux_states),humans)
-    l2 = length(pos)
-    if l2 > 0
-        for i in pos
-            x = humans[i]
-            agg = findfirst(x.age .∈ p.age_groups_vac)
-            if rand() < p.intervention_prob[agg]
-                nvacgiven += 1
-                x.days_vac = 0
-                x.index_day = 1
-                x.boosted = true
-                x.tested = false
-                x.n_boosted += 1
-                #### ADD here the new vaccine efficacy against Omicron for booster
-                    
-                x.vac_eff_inf[6][2][end] = p.new_vaccine_efficacy[x.vaccine_n][1]
-                x.vac_eff_symp[6][2][end] = p.new_vaccine_efficacy[x.vaccine_n][2]
-                x.vac_eff_sev[6][2][end] = p.new_vaccine_efficacy[x.vaccine_n][3]
-
-                #moderna has a different value against Delta for booster
-                x.vac_eff_inf[4][2][end] = [x.vac_eff_inf[4][2][end]; 0.94][x.vaccine_n]
-
-                if x.recovered
-                    index = Int(floor(x.days_recovered/7))
-
-                    if index > 0
-                        if index <= size(waning_factors_rec,1)
-                            aux = waning_factors_rec[index,1]
-                        else
-                            aux = waning_factors_rec[end,1]
-                        end
-                    else
-                        aux = 1.0
-                    end
-
-                    if aux > x.vac_eff_inf[1][x.vac_status][end]
-                        x.recvac = 1
-                    else
-                        x.recvac = 2
-                    end
-                end
-            else
-                x.tested = true
-            end
-        end
-    end
-    return nvacgiven
-end
 
 function vac_time!(sim::Int64,vac_ind::Vector{Vector{Int64}},time_pos::Int64,vac_rate_1::Matrix{Int64},vac_rate_2::Matrix{Int64},vac_rate_booster::Vector{Int64},vac_rate_booster2::Vector{Int64})
     aux_states = (MILD, MISO, INF, IISO, HOS, ICU, DED)
@@ -1440,7 +1121,7 @@ function vac_time_sept!(sim::Int64,vac_ind::Vector{Vector{Int64}},time_pos::Int6
     pos1 = findall(y-> y.vac_status == 2 && y.days_vac >= p.booster_after[y.vaccine_n] && y.age >= age_vac_booster && y.n_boosted < 1 && !(y.health_status in aux_states),humans)
     
     # And all who is eligible for second booster but is 50- (50+ is given in the next step)
-    pos2 = findall(y-> y.vac_status == 2 && y.days_vac >= p.booster_after[y.vaccine_n] && y.age >= age_vac_booster && y.age < 50 && y.n_boosted < 2 &&  && !(y.health_status in aux_states),humans)
+    pos2 = findall(y-> y.vac_status == 2 && y.days_vac >= p.booster_after[y.vaccine_n] && y.age >= age_vac_booster && y.age < 50 && y.n_boosted < 2  && !(y.health_status in aux_states),humans)
     
     pos = [pos1; pos2]
     remaining_doses = vac_rate_booster[time_pos]+remaining_doses
