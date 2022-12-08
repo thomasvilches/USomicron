@@ -199,7 +199,7 @@ end
 
 
 
-function run_param_scen_cal(calibrating::Bool,b::Float64,province::String="usa",ic1::Int64=1,ic2::Int64=1,ic3::Int64=1,ic4::Int64=1,ic5::Int64=1,ic6::Int64=1,index::Int64 = 0,idxtime::Int64 = 1,rc=[0.0],dc=[0],mt::Vector{Int64}=[973;-1;-3;-5;-7;-8],vac::Bool=true,tbn::Int64 = 9999,ro::Int64 = 1,dr::Int64=0,hospar::Float64 = 3.1,nsims::Int64=500)
+function run_param_scen_cal(calibrating::Bool,b::Float64,province::String="usa",ic1::Int64=1,ic2::Int64=1,ic3::Int64=1,ic4::Int64=1,ic5::Int64=1,ic6::Int64=1,index::Int64 = 0,idxtime::Int64 = 1,rc=[0.0],dc=[0],mt::Vector{Int64}=[973;-1;-3;-5;-7;-8],vac::Bool=true,tbn::Int64 = 9999,ro::Int64 = 1,dr::Int64=0, med::Float64 = 0.0,hospar::Float64 = 3.1,nsims::Int64=500)
     
     letters = ["A";"B";"C";"D"]
     #b = bd[h_i]
@@ -211,7 +211,8 @@ function run_param_scen_cal(calibrating::Bool,b::Float64,province::String="usa",
     time_change_contact = $dc,
     change_rate_values = $rc,time_back_to_normal = $tbn,relax_over = $ro, reduce_days = $dr,
     hosp_red = $hospar,
-    scenario = $index)
+    scenario = $index,
+    replace_med_eff = $med)
 
     folder = create_folder(ip,province,calibrating,letters[idxtime])
 

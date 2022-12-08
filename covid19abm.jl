@@ -192,6 +192,10 @@ end
     reduce_days::Int64 = 0
     modeltime::Vector{Int64} = [973;-1;-3;-5;-7;-9]
     day_count_booster::Int64 = 761
+
+    day_medicine::Int64 = 479
+    medicine_eff::Float64 = 0.0
+    replace_med_eff::Float64 = 0.86
     ### after calibration, how much do we want to increase the contact rate... in this case, to reach 70%
     ### 0.5*0.95 = 0.475, so we want to multiply this by 1.473684211
 end
@@ -468,7 +472,6 @@ function main(ip::ModelParameters,sim::Int64)
                 vac_ind = vac_selection(sim,12,agebraks_vac)
             elseif st == p.time_vac_kids2
                 vac_ind = vac_selection(sim,5,agebraks_vac)
-            
             end
             
             if st == p.change_booster_eligibility[elig_idx]
@@ -497,10 +500,13 @@ function main(ip::ModelParameters,sim::Int64)
                 time_prop += 1
             end
 
+            #medicine_eff
+            if st == p.day_medicine
+                setfield!(p, :medicine_eff, p.replace_med_eff)
+            end
 
             time_vac += 1
             if time_pos > 0
-                
                 
                 if st < p.date_sept
                     aux_ =  vac_time!(sim,vac_ind,time_pos+1,vac_rate_1,vac_rate_2,vac_rate_booster, vac_rate_booster2)
@@ -1878,6 +1884,13 @@ function move_to_inf(x::Human)
     ## transfers human h to the severe infection stage for γ days
     ## for swap, check if person will be hospitalized, selfiso, die, or recover
  
+    if x.age >= 65
+        medicine = p.medicine_eff
+    elseif x.age >= 20 && x.comorbidity == 1
+        medicine = p.medicine_eff
+    else
+        medicine = 0.0
+    end
     # h = prob of hospital, c = prob of icu AFTER hospital    
     comh = 0.98
     if x.strain == 1 || x.strain == 3 || x.strain == 5
@@ -1915,6 +1928,9 @@ function move_to_inf(x::Human)
         UK Health Security Agency, “Technical briefing: Update on hospitalisation and vaccine effectiveness for Omicron VOC-21NOV-01 (B.1.1.529)” (2021).
         C. M aslo, et al., Characteristics and Outcomes of Hospitalized Patients in South Africa During the COVID-19 Omicron Wave Compared With Previous Waves. JAMA (2021) https:/doi.org/10.1001/jama.2021.24868.
         =#
+
+
+
         if x.strain == 4
             if !x.recovered && x.vac_status < 2
                 h = h*2.65 #2.26 #https://www.thelancet.com/journals/laninf/article/PIIS1473-3099(21)00475-8/fulltext
@@ -1958,7 +1974,7 @@ function move_to_inf(x::Human)
     x.swap = UNDEF
     
     x.tis = 0 
-    if rand() < h     # going to hospital or ICU but will spend delta time transmissing the disease with full contacts 
+    if rand() < h*(1-medicine)     # going to hospital or ICU but will spend delta time transmissing the disease with full contacts 
         x.exp = time_to_hospital
         if rand() < c
             aux_v = [ICU;ICU2;ICU3;ICU4;ICU5;ICU6]
@@ -1982,7 +1998,7 @@ function move_to_inf(x::Human)
             x.swap_status = IISO
             #x.swap = x.strain == 1 ? IISO : IISO2
         else
-            if rand() < mh[gg]*aux
+            if rand() < mh[gg]*aux*(1-medicine) 
                 x.exp = x.dur[4] 
                 aux_v = [DED;DED2;DED3;DED4;DED5;DED6]
                 x.swap = aux_v[x.strain]
@@ -2012,7 +2028,15 @@ function move_to_iiso(x::Human)
     aux = 0.0#(p.mortality_inc^Int(x.strain==2 || x.strain == 4))
     #aux = x.strain == 4 || x.strain == 6 ? aux*0.0 : aux
 
-    if rand() < mh[gg]*aux
+    if x.age >= 65
+        medicine = p.medicine_eff
+    elseif x.age >= 20 && x.comorbidity == 1
+        medicine = p.medicine_eff
+    else
+        medicine = 0.0
+    end
+
+    if rand() < mh[gg]*aux*(1-medicine) 
         x.exp = x.dur[4] 
         aux_v = [DED;DED2;DED3;DED4;DED5;DED6]
         x.swap = aux_v[x.strain]
@@ -2083,6 +2107,16 @@ function move_to_hospicu(x::Human)
             error("No strain - hospicu")
     end
     
+
+    
+    if x.age >= 65
+        medicine = p.medicine_eff
+    elseif x.age >= 20 && x.comorbidity == 1
+        medicine = p.medicine_eff
+    else
+        medicine = 0.0
+    end
+
     gg = findfirst(y-> x.age in y,aux)
 
     psiH = Int(round(rand(Distributions.truncated(Gamma(4.5, 2.75), 8, 17))))
@@ -2099,7 +2133,7 @@ function move_to_hospicu(x::Human)
 
     if swaphealth == HOS
         x.hospicu = 1 
-        if rand() < mh[gg] ## person will die in the hospital 
+        if rand() < mh[gg]*(1-medicine)  ## person will die in the hospital 
             x.exp = muH 
             aux_v = [DED;DED2;DED3;DED4;DED5;DED6]
             x.swap = aux_v[x.strain]
@@ -2115,7 +2149,7 @@ function move_to_hospicu(x::Human)
     elseif swaphealth == ICU
         x.hospicu = 2 
                 
-        if rand() < mc[gg] ## person will die in the ICU 
+        if rand() < mc[gg]*(1-medicine)  ## person will die in the ICU 
             x.exp = muC
             aux_v = [DED;DED2;DED3;DED4;DED5;DED6]
             x.swap = aux_v[x.strain]
