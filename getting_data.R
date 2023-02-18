@@ -5,7 +5,7 @@ library(ggplot2)
 library(lubridate)
 library(data.table)
 theme_set(theme_bw())
-enddate=as.Date("2022-11-30")#as.Date("2022-01-31")
+enddate=as.Date("2022-12-12")#as.Date("2022-01-31")
 startvacdate = as.Date("2020-12-12")
 basedate = as.Date("2020-09-01")
 
@@ -345,7 +345,7 @@ head(data.cases)
 
 
 
-write.csv(data.cases,"../data_us_dez.csv",row.names=F)
+write.csv(data.cases,"../data_us_feb2023.csv",row.names=F)
 
 
 
