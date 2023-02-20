@@ -14,15 +14,3 @@ run_param_scen_cal(true,0.121,"usa",30,1,1,1,1,1,0,2,rc,dc,[833;-1;-3;-4;-5;-7;-
 # vaccinate up to the end in the current pace Dec 12th
 run_param_scen_cal(true,0.121,"usa",30,1,1,1,1,1,1,2,rc,dc,[833;-1;-3;-4;-5;-7;-9],false,425,70,0)
 
-
-
-#0.035/21
-# vaccinate up to the end in the current pace Dec 12th
-run_param_scen_cal(true,0.121,"usa",30,1,1,1,1,1,3,2,rc,dc,[833;-1;-3;-4;-5;-7;-9],true,425,70,0, 0.86)
-
-
-#0.035/21
-# vaccinate up to the end in the current pace Dec 12th
-run_param_scen_cal(true,0.121,"usa",30,1,1,1,1,1,4,2,rc,dc,[833;-1;-3;-4;-5;-7;-9],false,425,70,0, 0.86)
-
-
