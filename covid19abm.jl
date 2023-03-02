@@ -526,7 +526,10 @@ function main(ip::ModelParameters,sim::Int64)
         end
 
         ## change it here!!! this is the important part
-        
+        #I am adding it here, because right now we do care about the vaccination rate after the booster
+        if time_pos < length(vaccination_days) && time_vac == vaccination_days[time_pos+1]
+            time_pos += 1
+        end
         #p.scenario > 0 && vac_time_extra!(sim,st,ind1,ind2,indb,r1,r2,rb)
        
         _get_model_state(st, hmatrix) ## this datacollection needs to be at the start of the for loop
@@ -547,7 +550,10 @@ function main(ip::ModelParameters,sim::Int64)
             setfield!(p, :contact_change_rate, p.change_rate_values[count_change])
             count_change += 1
         end
-
+        #I am adding it here, because right now we do care about the vaccination rate after the booster
+        if time_pos < length(vaccination_days) && time_vac == vaccination_days[time_pos+1]
+            time_pos += 1
+        end
         ## change it here!!! this is the important part
         
         if p.scenario > 0    
@@ -561,7 +567,7 @@ function main(ip::ModelParameters,sim::Int64)
         
         # end of day
     end
-    #do not vaccinate for some time
+    #keep vaccinating with the baseline rate up to the end of simulation
     for st = p.modeltime[3]+1:p.modeltime[4]
         #println(st)
         if length(p.time_change_contact) >= count_change && p.time_change_contact[count_change] == st ###change contact pattern throughout the time
@@ -571,8 +577,23 @@ function main(ip::ModelParameters,sim::Int64)
 
         ## change it here!!! this is the important part
         
-        #p.scenario > 0 && vac_time_extra!(sim,st,ind1,ind2,indb,r1,r2,rb)
-       
+        
+        if time_pos < length(vaccination_days) && time_vac == vaccination_days[time_pos+1]
+            time_pos += 1
+        end
+
+        time_vac += 1
+        if time_pos > 0
+            
+            aux_ =  vac_time_oct!(sim,vac_ind,time_pos+1,vac_rate_1,vac_rate_2,vac_rate_booster, vac_rate_booster2)
+            
+            remaining_doses += aux_[1]
+            total_given += aux_[2]
+            #if st >= p.day_count_booster
+            #    nvacgiven += aux_[3]
+            #end 
+        end
+
         _get_model_state(st, hmatrix) ## this datacollection needs to be at the start of the for loop
         dyntrans(st, grps,sim)
     
@@ -582,6 +603,9 @@ function main(ip::ModelParameters,sim::Int64)
         # end of day
     end
 
+
+    # We do not care about this part anymore
+    # I am keeping that just for convenience
     for x in humans
         x.tested = false # I want to reset this
     end

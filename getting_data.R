@@ -3,7 +3,7 @@ library(dplyr)
 library(stringr)
 library(ggplot2)
 theme_set(theme_bw())
-enddate=as.Date("2022-08-30")#as.Date("2022-01-31")
+enddate=as.Date("2023-02-28")#as.Date("2022-01-31")
 startvacdate = as.Date("2020-12-12")
 
 population = 332968798
@@ -59,7 +59,7 @@ library(ggplot2)
 ### https://data.cdc.gov/Vaccinations/COVID-19-Vaccination-Demographics-in-the-United-St/km4m-vcsb
 data = read.csv("../COVID-19_Vaccination_Demographics_in_the_United_States_National.csv")
 head(data)
-
+tail(data)
 fields_data = unique(data$Demographic_category)
 fields_data
 
@@ -103,7 +103,7 @@ head(m1)
 m = round(m1/population*100000)
 head(m)
 
-write.table(m,"dose_1_us_aug.dat",col.names = F,row.names = F)
+write.table(m,"../dose_1_us_feb23.dat",col.names = F,row.names = F)
 
 
 df = stack(as.data.frame(m1))
@@ -134,7 +134,7 @@ head(m1)
 m = round(m1/population*100000)
 head(m)
 
-write.table(m,"../dose_2_us_aug.dat",col.names = F,row.names = F)
+write.table(m,"../dose_2_us_feb23.dat",col.names = F,row.names = F)
 
 
 df2 = stack(as.data.frame(m1))
@@ -144,7 +144,7 @@ df2$dose = rep("Second dose",nrow(df2))
 head(df)
 
 df_ = rbind(df,df2)
-ggplot()+geom_line(data = df_,aes(x = idx ,y=values,color =ind))+facet_grid(.~dose)
+ggplot()+geom_line(data = df_,aes(x = startvacdate+idx ,y=values,color =ind))+facet_grid(.~dose)
 
 
 
@@ -162,58 +162,21 @@ v = min(data$Date)+seq(0,nrow(m1)-1)
 sum(m1[v == as.Date("2021-11-19"),])
 
 
-#############################
-#### hospitalization
-### https://healthdata.gov/Hospital/COVID-19-Reported-Patient-Impact-and-Hospital-Capa/g62h-syeh
-library(zoo)
-#setwd("~/PosDoc/Coronavirus/USomicron/")
-data.hos = read.csv("../COVID-19_Reported_Patient_Impact_and_Hospital_Capacity_by_State_Timeseries.csv")
-head(data.hos)
-data.hos = data.hos[,c("state","date","previous_day_admission_adult_covid_confirmed","previous_day_admission_pediatric_covid_confirmed")]
-head(data.hos)
-na.fill(data.hos,as.numeric(0))
-
-data.hos
-unique(data.hos$state)
-
-data.hos2 = data.hos %>% mutate(date = as.Date(date,"%Y/%m/%d")) %>%
-  filter(date>=startvacdate,date<=enddate) %>% filter(!(state %in% c("PR","VI","AS")) ) %>% 
-  group_by(state) %>% 
-  summarise(hos_adult = sum(previous_day_admission_adult_covid_confirmed,na.rm=TRUE),
-            hos_pediatric = sum(previous_day_admission_pediatric_covid_confirmed,na.rm=TRUE),
-            hos = sum(previous_day_admission_adult_covid_confirmed+previous_day_admission_pediatric_covid_confirmed,na.rm=TRUE))
-
-data.hos2
-sum(data.hos2$hos)
-
-state_name = read.csv("PO-code.csv",sep = ";")
-data.hos2 = left_join(data.hos2,state_name,by="state") %>% rename(statePO = state,State = Name)
-
-df = left_join(df,data.hos2,by="State")
-df = df %>% mutate(Ratio.hos = hos/cases.state)
-
-
-pop = read.csv("NST-EST2021-POP.csv",sep = ";",h=F) %>% rename(state = V1,Pop2020=V2,PopEst=V3) %>%
-  mutate(state = str_remove(state,"."),Pop2020 = str_remove_all(Pop2020,",")) %>% mutate(Pop2020 = as.numeric(Pop2020)) %>% 
-  select(state,Pop2020) %>% rename(State = state)
-
-pop
-
- df = left_join(df,pop,by = "State")
-
-write.csv(df,"DeathFactors.csv",row.names=F)
-
-
 
 # Cases, Deaths,  Vaccination and Hospitalization -------------------------
 #################################################################
 #setwd("~/PosDoc/Coronavirus/USomicron/")
 ### https://covid.cdc.gov/covid-data-tracker/#vaccination-trends
 #need to remove lines from header
-data_boost = read.csv("../trends_in_number_of_covid19_vaccinations_in_the_us_firstbooster.csv")
+data_boost = read.csv("../trends_in_number_of_covid19_vaccinations_in_the_us.csv", skip = 2)
+data_boost %>% head
+names(data_boost)
+
+ggplot()+
+  geom_line(aes(x = as.Date(Date)))
 
 data_boost = data_boost %>% #filter(Date.Type == "Admin") %>% 
-  select(Date = `ï..Date`,Daily.Count.People.Receiving.a.First.Booster.Dose, Daily.Count.of.People.Ages.50...Receiving.a.Second.Booster.Dose) %>%
+  select(Date = Date,Daily.Count.People.Receiving.a.First.Booster.Dose, Daily.Count.of.People.Ages.50...Receiving.a.Second.Booster.Dose) %>%
   rename(Booster = Daily.Count.People.Receiving.a.First.Booster.Dose, SecBooster = Daily.Count.of.People.Ages.50...Receiving.a.Second.Booster.Dose) %>% 
   mutate(Date = as.Date(Date), Booster = as.numeric(Booster), SecBooster = as.numeric(SecBooster)) %>%
   filter(Date <= enddate)
@@ -227,9 +190,9 @@ data_boost$SecBooster100 = round(data_boost$SecBooster*100000/population)
 
 min(data_boost$Date)-as.Date("2020-09-01")
 
-write.table(c(0,data_boost$Booster100),"../booster1_aug.dat",row.names = F,col.names = F)
+write.table(c(0,data_boost$Booster100),"../booster1_feb23.dat",row.names = F,col.names = F)
 
-write.table(c(0,data_boost$SecBooster100),"../booster2_aug.dat",row.names = F,col.names = F)
+write.table(c(0,data_boost$SecBooster100),"../booster2_feb23.dat",row.names = F,col.names = F)
 
 
 
@@ -239,7 +202,6 @@ data_boost$Booster100 = round(data_boost$Booster*100000/population)
 
 min(data_boost$Date)-as.Date("2020-09-01")
 
-write.table(c(0,data_boost$Booster100),"../booster1_aug.dat",row.names = F,col.names = F)
 
 sum(data_boost$Booster100)
 aux = data_boost[data_boost$Date >= as.Date("2021-12-01") & data_boost$Date <= enddate,]
@@ -312,7 +274,7 @@ head(data.cases)
 
 
 
-write.csv(data.cases,"../data_us_aug.csv",row.names=F)
+write.csv(data.cases,"../data_us_feb23.csv",row.names=F)
 
 
 
