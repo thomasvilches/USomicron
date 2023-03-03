@@ -184,12 +184,12 @@ end
 function create_folder(ip::cv.ModelParameters,province="usa",calibrating = true,letter = "A")
     
     #RF = string("heatmap/results_prob_","$(replace(string(ip.β), "." => "_"))","_vac_","$(replace(string(ip.vaccine_ef), "." => "_"))","_herd_immu_","$(ip.herd)","_$strategy","cov_$(replace(string(ip.cov_val)))") ## 
-    #main_folder = "/data/thomas-covid/USbooster_scenarios"
-    main_folder = "."
+    main_folder = "/data/thomas-covid/USbooster_scenarios"
+    #main_folder = "."
     if calibrating
-        RF = string(main_folder,"/results_prob_","$(replace(string(ip.β), "." => "_"))","_$(ip.file_index)_$(letter)_$(province)") ##  
+        RF = string(main_folder,"/fmild_$(ip.fmild)/results_prob_","$(replace(string(ip.β), "." => "_"))","_$(ip.file_index)_$(letter)_$(province)") ##  
     else
-        RF = string(main_folder,"/results_prob_$(ip.file_index)_$(province)") ##  
+        RF = string(main_folder,"/fmild_$(ip.fmild)/results_prob_$(ip.file_index)_$(province)") ##  
     end
     if !Base.Filesystem.isdir(RF)
         Base.Filesystem.mkpath(RF)
@@ -199,12 +199,12 @@ end
 
 
 
-function run_param_scen_cal(calibrating::Bool,b::Float64,province::String="usa",ic1::Int64=1,ic2::Int64=1,ic3::Int64=1,ic4::Int64=1,ic5::Int64=1,ic6::Int64=1,index::Int64 = 0,idxtime::Int64 = 1,rc=[0.0],dc=[0],mt::Vector{Int64}=[973;-1;-3;-5;-7;-8],vac_cov::Vector{Float64}=[0.8;0.8;0.8;0.8;0.8],vac::Bool=true,tbn::Int64 = 9999,ro::Int64 = 1,dr::Int64=0, new_vac_ef::Vector{Vector{Float64}} = [[0.81; 0.875; 0.94], [0.82;0.89;0.935]],hospar::Float64 = 3.1,nsims::Int64=500)
+function run_param_scen_cal(calibrating::Bool,b::Float64,province::String="usa",ic1::Int64=1,ic2::Int64=1,ic3::Int64=1,ic4::Int64=1,ic5::Int64=1,ic6::Int64=1,index::Int64 = 0,idxtime::Int64 = 1,rc=[0.0],dc=[0],mt::Vector{Int64}=[973;-1;-3;-5;-7;-8],vac_cov::Vector{Float64}=[0.8;0.8;0.8;0.8;0.8],vac::Bool=true,tbn::Int64 = 9999,ro::Int64 = 1,dr::Int64=0, new_vac_ef::Vector{Vector{Float64}} = [[0.81; 0.875; 0.94], [0.82;0.89;0.935]],fmildp::Float64 = 1.0, hospar::Float64 = 3.1,nsims::Int64=500)
     
     letters = ["A";"B";"C";"D"]
     #b = bd[h_i]
     #ic = init_con[h_i]
-    @everywhere ip = cv.ModelParameters(β=$b,fsevere = 1.0,fmild = 1.0,vaccinating = $vac,
+    @everywhere ip = cv.ModelParameters(β=$b,fsevere = 1.0,fmild = $fmildp,vaccinating = $vac,
     start_several_inf=true,initialinf3=$ic3,initialinf6=$ic6,initialinf=$ic1,initialinf2=$ic2,initialinf5=$ic5,initialinf4=$ic4,
     status_relax = 2, relax_after = 14,file_index = $index,
     modeltime=$mt, prov = Symbol($province),

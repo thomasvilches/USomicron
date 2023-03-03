@@ -163,6 +163,98 @@ sum(m1[v == as.Date("2021-11-19"),])
 
 
 
+# Booster vaccination -----------------------------------------------------
+
+
+### https://data.cdc.gov/Vaccinations/COVID-19-Vaccination-Demographics-in-the-United-St/km4m-vcsb
+data = read.csv("../COVID-19_Vaccination_Demographics_in_the_United_States_National.csv")
+head(data)
+tail(data)
+fields_data = unique(data$Demographic_category)
+fields_data
+
+
+# [5:11,12:17, 18:24, 25:39, 40:49, 50:64, 65:74, 75:100]
+fields_data = fields_data[grepl("Ages_",fields_data,fixed = T)]
+fields_data
+fields_data = fields_data[-c(7,2,8,11)]
+fields_data
+
+
+field_correct = c("Ages_5-11_yrs","Ages_12-17_yrs","Ages_18-24_yrs",
+                  "Ages_25-39_yrs","Ages_40-49_yrs","Ages_50-64_yrs",
+                  "Ages_65-74_yrs","Ages_75+_yrs")
+
+data = data %>% filter(Demographic_category %in% field_correct) %>% mutate(Date = as.Date(Date,"%m/%d/%Y")) %>%
+  filter(Date <= enddate)
+head(data)
+
+
+
+ggplot()+geom_line(data = data, aes(x = Date,y=Booster_Doses_Yes,color = Demographic_category))
+
+
+nr = length(unique(data$Date))
+nr
+m1 = matrix(0,nr,length(field_correct))
+data_ = data[order(data$Date),]
+for(i in 1:length(field_correct)){
+  print(i)
+  d = data_$Date[data_$Demographic_category == field_correct[i]]
+  x = data_$Booster_Doses_Yes[data_$Demographic_category == field_correct[i]]
+  
+  x = c(0,x)
+  dff_ = diff(x)
+  
+  m1[,i] = dff_
+}
+
+colnames(m1) = field_correct
+
+head(m1)
+m = round(m1/population*100000)
+head(m)
+
+rowSums(m) %>% length()
+
+write.table(rowSums(m),"../booster_1_us_feb23.dat",col.names = F,row.names = F)
+
+plot(rowSums(m), type = "l")
+
+mb1 = m1
+
+
+ggplot()+geom_line(data = data, aes(x = Date,y=Second_Booster,color = Demographic_category))
+
+
+nr = length(unique(data$Date))
+nr
+m1 = matrix(0,nr,length(field_correct))
+data_ = data[order(data$Date),]
+for(i in 1:length(field_correct)){
+  print(i)
+  d = data_$Date[data_$Demographic_category == field_correct[i]]
+  x = data_$Second_Booster[data_$Demographic_category == field_correct[i]]
+  
+  x = c(0,x)
+  dff_ = diff(x)
+  
+  m1[,i] = dff_
+}
+
+colnames(m1) = field_correct
+
+head(m1)
+m = round(m1/population*100000)
+head(m)
+
+rowSums(m) %>% length()
+
+write.table(rowSums(m, na.rm = TRUE),"../booster_2_us_feb23.dat",col.names = F,row.names = F)
+
+plot(rowSums(mb1), type = "l")
+lines(rowSums(m1,na.rm = TRUE), col = "red")
+
 # Cases, Deaths,  Vaccination and Hospitalization -------------------------
 #################################################################
 #setwd("~/PosDoc/Coronavirus/USomicron/")
@@ -275,44 +367,6 @@ head(data.cases)
 
 
 write.csv(data.cases,"../data_us_feb23.csv",row.names=F)
-
-
-
-
-
-# for entire US 2 -----------------------------------------------------------
-
-
-temp <- tempfile()
-download.file("https://raw.githubusercontent.com/nytimes/covid-19-data/master/us-states.csv",temp)
-data.cases <- read.csv(temp,h=T,stringsAsFactors = F)
-unlink(temp)
-rm(temp)
-
-
-head(data.cases)
-ignore_states = c("Virgin Islands","Guam","Puerto Rico","Northern Mariana Islands","American Samoa")
-data.cases %>% filter(!(state %in% ignore_states)) %>% select(state) %>% unique() %>% pull(state) %>% length()
-
-data.cases = data.cases %>% filter(!(state %in% ignore_states)) %>% 
-  mutate(date=as.Date(date))
-
-data.cases.test = data.cases %>% arrange(date)  %>% group_by(state) %>% 
-  mutate(inc_cases = diff(c(0,cases)),inc_deaths = diff(c(0,deaths))) %>%
-  filter(date<=as.Date("2022-03-31"), date>= as.Date("2020-10-01")) %>%
-  mutate(inc_deaths = ifelse(inc_deaths<0,0,inc_deaths),inc_cases = ifelse(inc_cases<0,0,inc_cases)) %>%
-  group_by(date) %>% summarise(inc_cases = sum(inc_cases),inc_deaths = sum(inc_deaths))
-
-
-head(data.cases.test)
-ggplot()+geom_col(data = data.cases.test,aes(x=date,y=inc_cases))
-
-ggplot()+geom_col(data = data.cases.test,aes(x=date,y=inc_deaths))
-
-data.cases = cbind(data.cases.test,data.hos2[-1])
-head(data.cases)
-
-write.csv(data.cases.test,"data_us_seyed.csv",row.names=F)
 
 
 
