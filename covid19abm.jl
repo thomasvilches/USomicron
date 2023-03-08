@@ -71,6 +71,7 @@ end
     τmild::Int64 = 0 ## days before they self-isolate for mild cases
     τsevere::Int64 = 0 ## days before they self-isolate for mild cases
     fmild::Float64 = 1.0  ## percent of people practice self-isolation
+    fmild2::Float64 = 1.0  ## percent of people practice self-isolation
     fsevere::Float64 = 1.0 #
     fpreiso::Float64 = 0.0 ## percent that is isolated at the presymptomatic stage
     tpreiso::Int64 = 0## preiso is only turned on at this time. 
@@ -517,6 +518,7 @@ function main(ip::ModelParameters,sim::Int64)
         end
     end
     
+    setfield!(p, :fmild, p.fmild2)
     # do not vaccinate
     for st = p.modeltime[1]+1:p.modeltime[2]
         #println(st)

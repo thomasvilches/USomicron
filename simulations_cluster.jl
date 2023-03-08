@@ -187,9 +187,9 @@ function create_folder(ip::cv.ModelParameters,province="usa",calibrating = true,
     main_folder = "/data/thomas-covid/USbooster_scenarios"
     #main_folder = "."
     if calibrating
-        RF = string(main_folder,"/fmild_$(ip.fmild)/results_prob_","$(replace(string(ip.β), "." => "_"))","_$(ip.file_index)_$(letter)_$(province)") ##  
+        RF = string(main_folder,"/fmild_$(ip.fmild2)/results_prob_","$(replace(string(ip.β), "." => "_"))","_$(ip.file_index)_$(letter)_$(province)") ##  
     else
-        RF = string(main_folder,"/fmild_$(ip.fmild)/results_prob_$(ip.file_index)_$(province)") ##  
+        RF = string(main_folder,"/fmild_$(ip.fmild2)/results_prob_$(ip.file_index)_$(province)") ##  
     end
     if !Base.Filesystem.isdir(RF)
         Base.Filesystem.mkpath(RF)
@@ -204,7 +204,7 @@ function run_param_scen_cal(calibrating::Bool,b::Float64,province::String="usa",
     letters = ["A";"B";"C";"D"]
     #b = bd[h_i]
     #ic = init_con[h_i]
-    @everywhere ip = cv.ModelParameters(β=$b,fsevere = 1.0,fmild = $fmildp,vaccinating = $vac,
+    @everywhere ip = cv.ModelParameters(β=$b,fsevere = 1.0, fmild = 1.0,fmild2 = $fmildp,vaccinating = $vac,
     start_several_inf=true,initialinf3=$ic3,initialinf6=$ic6,initialinf=$ic1,initialinf2=$ic2,initialinf5=$ic5,initialinf4=$ic4,
     status_relax = 2, relax_after = 14,file_index = $index,
     modeltime=$mt, prov = Symbol($province),
