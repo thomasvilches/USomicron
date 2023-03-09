@@ -2652,9 +2652,12 @@ export _get_betavalue
         aux = x.relaxed ? 1.0*(p.contact_change_rate^p.turnon) : p.contact_change_rate*p.contact_change_2
         cnt = rand(negative_binomials(ag,aux)) ##using the contact average for shelter-in
     else 
-        cnt = rand(negative_binomials_shelter(ag,p.contact_change_2))  # expensive operation, try to optimize
+        cnt = rand(negative_binomials_shelter(ag,p.contact_change_2))#*0.27*p.contact_change_rate  # expensive operation, try to optimize
     end
     
+    # x*prop  
+    # x*0.28*prop 
+
     if x.health_status == DED
         cnt = 0 
     end
@@ -2680,12 +2683,20 @@ function dyntrans(sys_time, grps,sim)
             for (i, g) in enumerate(gpw) 
                 meet = rand(grps[i], g)   # sample the people from each group
                 # go through each person
+                meet = filter(jjj -> humans[jjj].health_status ∉ (MILD, MISO)|| (humans[jjj].health_status == MILD && humans[jjj].tis == 0) || (humans[jjj].health_status ∈ (MILD, MISO) && humans[jjj].iso), meet)
                 for j in meet 
                     y = humans[j]
                     ycnt = y.nextday_meetcnt    
                     ycnt == 0 && continue
 
-                    y.nextday_meetcnt = y.nextday_meetcnt - 1 # remove a contact
+                    if x.health_status ∉ (MILD, MISO)
+                        y.nextday_meetcnt = y.nextday_meetcnt - 1 # remove a contact
+                    elseif x.iso
+                        y.nextday_meetcnt = y.nextday_meetcnt - 1 # remove a contact
+                    elseif x.tis == 0
+                        y.nextday_meetcnt = y.nextday_meetcnt - 1 # remove a contact
+                    end
+
                     totalmet += 1
                     
                     beta = _get_betavalue(sys_time, xhealth)

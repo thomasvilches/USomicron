@@ -42,6 +42,18 @@ run_param_scen_cal(true,0.121,"usa",30,1,1,1,1,1,0,4,rc,dc,[760;941;-3;-5;-7;-9;
 
 
 
+### Teste!!!
+
+#1.0
+#vaccinate Octuber, Nov, Dec
+#Stop vaccinating in octuber
+run_param_scen_cal(true,0.121,"usa",30,1,1,1,1,1,0,4,rc,dc,[760;941;-3;-5;-7;-9;-11],[0.0;0.0;0.0;0.0;0.0],true,425,70,0,[[0.76; 0.82; 0.90], [0.677;0.82;0.90]])
+#0.5
+#vaccinate Octuber, Nov, Dec
+#Stop vaccinating in octuber
+run_param_scen_cal(true,0.121,"usa",30,1,1,1,1,1,0,4,rc,dc,[760;941;-3;-5;-7;-9;-11],[0.0;0.0;0.0;0.0;0.0],true,425,70,0,[[0.76; 0.82; 0.90], [0.677;0.82;0.90]], 0.5)
+
+
 
 
 #vaccinate Octuber, Nov, Dec
