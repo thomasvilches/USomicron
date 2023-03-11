@@ -192,6 +192,11 @@ end
     reduce_days::Int64 = 0
     modeltime::Vector{Int64} = [973;-1;-3;-5;-7;-9]
     day_count_booster::Int64 = 761
+    iso_contact::Float64 = contact_change_rate
+    save_contact_rate::Float64 = 0.0
+    n_days_iso_contact::Int64 = 15
+    day_iso_contact::Int64 = 760
+    
     ### after calibration, how much do we want to increase the contact rate... in this case, to reach 70%
     ### 0.5*0.95 = 0.475, so we want to multiply this by 1.473684211
 end
@@ -460,7 +465,16 @@ function main(ip::ModelParameters,sim::Int64)
                 count_change += 1
             end
 
+            if st < p.day_iso_contact
+                setfield!(p, :iso_contact, p.contact_change_rate)
+            elseif st == p.day_iso_contact
+                p.save_contact_rate = (1.0-p.iso_contact)/p.n_days_iso_contact
+                
+            elseif p.iso_contact < 1.0
+                setfield!(p, :iso_contact, min(p.iso_contact+p.save_contact_rate, 1.0))
+            end
             
+            #println(string("isocontact = ",p.iso_contact, " st ", st))
             if st == p.time_vac_kids
                 vac_ind = vac_selection(sim,12,agebraks_vac)
             elseif st == p.time_vac_kids2
@@ -526,7 +540,16 @@ function main(ip::ModelParameters,sim::Int64)
             setfield!(p, :contact_change_rate, p.change_rate_values[count_change])
             count_change += 1
         end
-
+        
+        
+        if st < p.day_iso_contact
+            setfield!(p, :iso_contact, p.contact_change_rate)
+        elseif st == p.day_iso_contact
+            p.save_contact_rate = (1.0-p.iso_contact)/p.n_days_iso_contact
+            
+        elseif p.iso_contact < 1.0
+            setfield!(p, :iso_contact, min(p.iso_contact+p.save_contact_rate, 1.0))
+        end
         ## change it here!!! this is the important part
         #I am adding it here, because right now we do care about the vaccination rate after the booster
         if time_pos < length(vaccination_days) && time_vac == vaccination_days[time_pos+1]
@@ -551,6 +574,16 @@ function main(ip::ModelParameters,sim::Int64)
         if length(p.time_change_contact) >= count_change && p.time_change_contact[count_change] == st ###change contact pattern throughout the time
             setfield!(p, :contact_change_rate, p.change_rate_values[count_change])
             count_change += 1
+        end
+        
+        
+        if st < p.day_iso_contact
+            setfield!(p, :iso_contact, p.contact_change_rate)
+        elseif st == p.day_iso_contact
+            p.save_contact_rate = (1.0-p.iso_contact)/p.n_days_iso_contact
+            
+        elseif p.iso_contact < 1.0
+            setfield!(p, :iso_contact, min(p.iso_contact+p.save_contact_rate, 1.0))
         end
         #I am adding it here, because right now we do care about the vaccination rate after the booster
         if time_pos < length(vaccination_days) && time_vac == vaccination_days[time_pos+1]
@@ -577,6 +610,15 @@ function main(ip::ModelParameters,sim::Int64)
             count_change += 1
         end
 
+        
+        if st < p.day_iso_contact
+            setfield!(p, :iso_contact, p.contact_change_rate)
+        elseif st == p.day_iso_contact
+            p.save_contact_rate = (1.0-p.iso_contact)/p.n_days_iso_contact
+            
+        elseif p.iso_contact < 1.0
+            setfield!(p, :iso_contact, min(p.iso_contact+p.save_contact_rate, 1.0))
+        end
         ## change it here!!! this is the important part
         
         
@@ -604,7 +646,6 @@ function main(ip::ModelParameters,sim::Int64)
         
         # end of day
     end
-
 
     return hmatrix, remaining_doses, total_given, nvacgiven, lat,hos, icu, ded,lat2, hos2, icu2, ded2,lat3, hos3, icu3, ded3, lat4, hos4, icu4, ded4, lat5, hos5, icu5, ded5, lat6, hos6, icu6, ded6, lat7, hos7, icu7, ded7, lat8, hos8, icu8, ded8 ## return the model state as well as the age groups. 
 end
@@ -2652,7 +2693,7 @@ export _get_betavalue
         aux = x.relaxed ? 1.0*(p.contact_change_rate^p.turnon) : p.contact_change_rate*p.contact_change_2
         cnt = rand(negative_binomials(ag,aux)) ##using the contact average for shelter-in
     else 
-        cnt = rand(negative_binomials_shelter(ag,p.contact_change_2))#*0.27*p.contact_change_rate  # expensive operation, try to optimize
+        cnt = rand(negative_binomials_shelter(ag,p.contact_change_2*(p.contact_change_rate/p.iso_contact)))#*0.27*p.contact_change_rate  # expensive operation, try to optimize
     end
     
     # x*prop  
