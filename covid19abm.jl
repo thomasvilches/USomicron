@@ -196,6 +196,8 @@ end
     save_contact_rate::Float64 = 0.0
     n_days_iso_contact::Int64 = 15
     day_iso_contact::Int64 = 760
+
+    day_change_iso::Int64 = 760
     
     ### after calibration, how much do we want to increase the contact rate... in this case, to reach 70%
     ### 0.5*0.95 = 0.475, so we want to multiply this by 1.473684211
@@ -480,6 +482,10 @@ function main(ip::ModelParameters,sim::Int64)
             elseif st == p.time_vac_kids2
                 vac_ind = vac_selection(sim,5,agebraks_vac)
             
+            end
+
+            if st == p.day_change_iso
+                setfield!(p, :fmild, p.fmild2)
             end
             
             if st == p.change_booster_eligibility
