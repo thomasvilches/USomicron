@@ -55,6 +55,7 @@ Base.@kwdef mutable struct Human
     waning::Vector{Float64} = [1.0;1.0]
     tested::Bool = false
     max_boost::Int8 = 0
+    n_booster_taken::Vector{Int64} = [0;0;0;0;0;0]
     
 end
 
@@ -133,6 +134,7 @@ end
     booster_after_bkup::Array{Int64,1} = [150;150;9999]
     change_booster_eligibility::Int64 = 490
     date_octuber::Int16 = 761
+    dates_vacs::Vector{Int64} = [761;792;822;853;884;912;943]
     #=------------ Vaccine Efficacy ----------------------------=#
     days_to_protection::Array{Array{Array{Int64,1},1},1} = [[[14;21],[0;7]],[[14;21],[0;7]],[[14]]]
     vac_efficacy_inf::Array{Array{Array{Array{Float64,1},1},1},1} = [[[[0.46;0.46],[0.46;0.861]],[[0.295;0.295],[0.295;0.895]],[[0.368;0.368],[0.368;0.75]],[[0.416;0.416],[0.416;0.85]],[[0.46;0.46],[0.46;0.861]],[[0.16;0.16],[0.16;0.33]]],#booster efficacy  for omicron changed in vac_time function
@@ -267,6 +269,13 @@ function runsim(simnum, ip::ModelParameters)
     coverage12 = length(findall(x-> x.vac_status >= 1,humans))/p.popsize
     coverage22 = length(findall(x-> x.vac_status == 2,humans))/p.popsize
 
+    ## Let's use the function splitstate to get the result from number of doses
+
+    Mdoses = [humans[i].n_booster_taken for i in 1:length(humans)]
+    Mdoses = Matrix(hcat(Mdoses...)')
+    vv = _splitstate(Mdoses, ags)
+
+    vv = map(x-> sum(Matrix(x), dims = 1), vv)
     #### let's count the number of vaccines for each vaccine thaat was given
     aux =  findall(x-> x.vaccine_n == 2  && x.vac_status == 1, humans)
     n_moderna = length(aux)
@@ -347,7 +356,9 @@ function runsim(simnum, ip::ModelParameters)
     n_pfizer_2 = n_pfizer_2, n_moderna_2 = n_moderna_2, n_jensen_2 = n_jensen_2, n_pfizer_w_2 = n_pfizer_w_2, n_moderna_w_2 = n_moderna_w_2, n_jensen_w_2 = n_jensen_w_2, 
     n_pfizer_3 = n_pfizer_3, n_moderna_3 = n_moderna_3, n_jensen_3 = n_jensen_3, n_pfizer_w_3 = n_pfizer_w_3, n_moderna_w_3 = n_moderna_w_3, n_jensen_w_3 = n_jensen_w_3, 
     n_pfizer_4 = n_pfizer_4, n_moderna_4 = n_moderna_4, n_jensen_4 = n_jensen_4, n_pfizer_w_4 = n_pfizer_w_4, n_moderna_w_4 = n_moderna_w_4, n_jensen_w_4 = n_jensen_w_4, 
-    remaining = remaining_doses, total_given = total_given, nvacgiven = nvacgiven, n5plus = n5plus, vage = vage)
+    remaining = remaining_doses, total_given = total_given, nvacgiven = nvacgiven, n5plus = n5plus, vage = vage,
+    dose_ag1 = vv[1], dose_ag2 = vv[2], dose_ag3 = vv[3], dose_ag4 = vv[4], dose_ag5 = vv[5], dose_ag6 = vv[6], dose_ag7 = vv[7],
+    dose_ag8 = vv[8], dose_ag9 = vv[9], dose_ag10 = vv[10])
 end
 export runsim
 
@@ -519,7 +530,12 @@ function main(ip::ModelParameters,sim::Int64)
                 if st < p.date_octuber
                     aux_ =  vac_time!(sim,vac_ind,time_pos+1,vac_rate_1,vac_rate_2,vac_rate_booster, vac_rate_booster2)
                 else
-                    aux_ =  vac_time_oct!(sim,vac_ind,time_pos+1,vac_rate_1,vac_rate_2,vac_rate_booster, vac_rate_booster2)
+                    ttt = findfirst(x->st<p.dates_vacs[x+1], 1:(length(p.dates_vacs)-1))
+                    if ttt !== nothing
+                        aux_ =  vac_time_oct!(sim,vac_ind,time_pos+1,vac_rate_1,vac_rate_2,vac_rate_booster, vac_rate_booster2, ttt)
+                    else
+                        aux_ =  vac_time_oct!(sim,vac_ind,time_pos+1,vac_rate_1,vac_rate_2,vac_rate_booster, vac_rate_booster2, 0)
+                    end
                 end
                 remaining_doses += aux_[1]
                 total_given += aux_[2]
@@ -598,7 +614,12 @@ function main(ip::ModelParameters,sim::Int64)
         ## change it here!!! this is the important part
         
         if p.scenario > 0    
-            nvacgiven += vac_time_extra!(sim,st,ind1,ind2,indb,r1,r2,rb)
+            ttt = findfirst(x->st<p.dates_vacs[x+1], 1:(length(p.dates_vacs)-1))
+            if ttt !== nothing
+                nvacgiven += vac_time_extra!(sim,st,ind1,ind2,indb,r1,r2,rb, ttt)
+            else
+                nvacgiven += vac_time_extra!(sim,st,ind1,ind2,indb,r1,r2,rb, 0)
+            end
         end
         _get_model_state(st, hmatrix) ## this datacollection needs to be at the start of the for loop
         dyntrans(st, grps,sim)
@@ -635,8 +656,12 @@ function main(ip::ModelParameters,sim::Int64)
         time_vac += 1
         if time_pos > 0
             
-            aux_ =  vac_time_oct!(sim,vac_ind,time_pos+1,vac_rate_1,vac_rate_2,vac_rate_booster, vac_rate_booster2)
-            
+            ttt = findfirst(x->st<p.dates_vacs[x+1], 1:(length(p.dates_vacs)-1))
+            if ttt !== nothing
+                aux_ =  vac_time_oct!(sim,vac_ind,time_pos+1,vac_rate_1,vac_rate_2,vac_rate_booster, vac_rate_booster2, ttt)
+            else
+                aux_ =  vac_time_oct!(sim,vac_ind,time_pos+1,vac_rate_1,vac_rate_2,vac_rate_booster, vac_rate_booster2, 0)
+            end
             remaining_doses += aux_[1]
             total_given += aux_[2]
             #if st >= p.day_count_booster
@@ -777,7 +802,7 @@ function get_sample(idx,sim,xv,ag)
 end
 
 
-function vac_time_extra!(sim::Int64,st::Int64,ind1,ind2,indb,r1::Int64,r2::Int64,rb::Int64)
+function vac_time_extra!(sim::Int64,st::Int64,ind1,ind2,indb,r1::Int64,r2::Int64,rb::Int64, month_idx::Int64)
     aux_states = (MILD, MISO, INF, IISO, HOS, ICU, DED)
     nvacgiven::Int64  = 0
     ##first dose
@@ -916,6 +941,9 @@ function vac_time_extra!(sim::Int64,st::Int64,ind1,ind2,indb,r1::Int64,r2::Int64
             x.boosted = true
             x.tested = false
             x.n_boosted += 1
+            if month_idx > 0
+                x.n_booster_taken[month_idx] += 1
+            end
             #### ADD here the new vaccine efficacy against Omicron for booster
                 
             x.vac_eff_inf[6][2][end] = p.new_vaccine_efficacy[x.vaccine_n][1]
@@ -965,6 +993,9 @@ function vac_time_extra!(sim::Int64,st::Int64,ind1,ind2,indb,r1::Int64,r2::Int64
                 x.boosted = true
                 x.tested = false
                 x.n_boosted += 1
+                if month_idx > 0
+                    x.n_booster_taken[month_idx] += 1
+                end
                 #### ADD here the new vaccine efficacy against Omicron for booster
                     
                 x.vac_eff_inf[6][2][end] = p.new_vaccine_efficacy[x.vaccine_n][1]
@@ -1325,7 +1356,7 @@ function vac_time!(sim::Int64,vac_ind::Vector{Vector{Int64}},time_pos::Int64,vac
 
 end
 
-function vac_time_oct!(sim::Int64,vac_ind::Vector{Vector{Int64}},time_pos::Int64,vac_rate_1::Matrix{Int64},vac_rate_2::Matrix{Int64},vac_rate_booster::Vector{Int64},vac_rate_booster2::Vector{Int64})
+function vac_time_oct!(sim::Int64,vac_ind::Vector{Vector{Int64}},time_pos::Int64,vac_rate_1::Matrix{Int64},vac_rate_2::Matrix{Int64},vac_rate_booster::Vector{Int64},vac_rate_booster2::Vector{Int64}, month_idx::Int64)
     aux_states = (MILD, MISO, INF, IISO, HOS, ICU, DED)
     ##first dose
    # rng = MersenneTwister(123*sim)
@@ -1574,6 +1605,9 @@ function vac_time_oct!(sim::Int64,vac_ind::Vector{Vector{Int64}},time_pos::Int64
         x.n_boosted += 1
         nvacgiven += 1
         remaining_doses -= 1
+        if month_idx > 0
+            x.n_booster_taken[month_idx] += 1
+        end
         #### ADD here the new vaccine efficacy against Omicron for booster
         
         x.vac_eff_inf[6][2][end] = p.new_vaccine_efficacy[x.vaccine_n][1]
@@ -1617,6 +1651,9 @@ function vac_time_oct!(sim::Int64,vac_ind::Vector{Vector{Int64}},time_pos::Int64
         x.boosted = true
         x.n_boosted += 1
         nvacgiven += 1
+        if month_idx > 0
+            x.n_booster_taken[month_idx] += 1
+        end
         #### ADD here the new vaccine efficacy against Omicron for booster
             
         x.vac_eff_inf[6][2][end] = p.new_vaccine_efficacy[x.vaccine_n][1]

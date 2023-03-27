@@ -132,6 +132,29 @@ function run(myp::cv.ModelParameters, nsims=1000, folderprefix="./")
     nvacgiven = [cdr[i].nvacgiven for i=1:nsims]
     n5plus = [cdr[i].n5plus for i=1:nsims]
 
+    dose_ag1 = hcat([cdr[i].dose_ag1 for i = 1:nsims]...)
+    dose_ag2 = hcat([cdr[i].dose_ag2 for i = 1:nsims]...)
+    dose_ag3 = hcat([cdr[i].dose_ag3 for i = 1:nsims]...)
+    dose_ag4 = hcat([cdr[i].dose_ag4 for i = 1:nsims]...)
+    dose_ag5 = hcat([cdr[i].dose_ag5 for i = 1:nsims]...)
+    dose_ag6 = hcat([cdr[i].dose_ag6 for i = 1:nsims]...)
+    dose_ag7 = hcat([cdr[i].dose_ag7 for i = 1:nsims]...)
+    dose_ag8 = hcat([cdr[i].dose_ag8 for i = 1:nsims]...)
+    dose_ag9 = hcat([cdr[i].dose_ag9 for i = 1:nsims]...)
+    dose_ag10 = hcat([cdr[i].dose_ag10 for i = 1:nsims]...)
+    
+    writedlm(string(folderprefix,"/vac_doses_ag1.dat"), dose_ag1)
+    writedlm(string(folderprefix,"/vac_doses_ag2.dat"), dose_ag2)
+    writedlm(string(folderprefix,"/vac_doses_ag3.dat"), dose_ag3)
+    writedlm(string(folderprefix,"/vac_doses_ag4.dat"), dose_ag4)
+    writedlm(string(folderprefix,"/vac_doses_ag5.dat"), dose_ag5)
+    writedlm(string(folderprefix,"/vac_doses_ag6.dat"), dose_ag6)
+    writedlm(string(folderprefix,"/vac_doses_ag7.dat"), dose_ag7)
+    writedlm(string(folderprefix,"/vac_doses_ag8.dat"), dose_ag8)
+    writedlm(string(folderprefix,"/vac_doses_ag9.dat"), dose_ag9)
+    writedlm(string(folderprefix,"/vac_doses_ag10.dat"), dose_ag10)
+
+
 
 
     writedlm(string(folderprefix,"/vaccine_all.dat"),[vac_p vac_m vac_j vac_p_2 vac_m_2 vac_j_2 vac_p_3 vac_m_3 vac_j_3 vac_p_4 vac_m_4 vac_j_4])
